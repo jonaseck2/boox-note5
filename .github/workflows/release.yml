@@ -1,0 +1,47 @@
+# Build and publish a glue release (display shim + module scripts + E-ink settings app) from a clean
+# checkout. No device libraries needed: the shim links against stubs (byte-identical output, see
+# docs/runbooks/eink-interface.md). The APK is signed with the existing key from the repo secret
+# EINK_KEYSTORE_B64, so the tablet accepts it as an update.
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Glue version, YYYY.MM.DD.N"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate version
+        env:
+          V: ${{ inputs.version }}
+        run: echo "$V" | grep -Eq '^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]{1,2}$'
+      - name: Toolchain
+        run: sudo apt-get update -q && sudo apt-get install -y -q clang lld
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Build display shim (stub sysroot)
+        run: CLANG=clang LLD=ld.lld device/epdcshim/build.sh
+      - name: Build E-ink settings app
+        env:
+          EINK_KEYSTORE_B64: ${{ secrets.EINK_KEYSTORE_B64 }}
+        run: |
+          umask 077
+          echo "$EINK_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/eink.keystore"
+          BOOX_TOOLS="$RUNNER_TEMP/tools" EINK_KEYSTORE="$RUNNER_TEMP/eink.keystore" EINK_REQUIRE_KEYSTORE=1 \
+            device/einksettings/build.sh
+          rm -f "$RUNNER_TEMP/eink.keystore"
+      - name: Bundle and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ inputs.version }}
+        run: cd tools && python3 -m booxctl release glue --version "$V" --publish --repo "$GITHUB_REPOSITORY"

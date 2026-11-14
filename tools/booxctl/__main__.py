@@ -52,7 +52,7 @@ def main(argv=None):
     g.add_argument("--bundle", type=Path, help="local boox-glue-<version>.zip (with its .sha256 next to it)")
     pu.add_argument("--repo", default="jonaseck2/boox-note5")
     a = ap.parse_args(argv)
-    dev = Device(Runner())
+    dev = None if a.cmd == "release" else Device(Runner())   # release needs no tablet (CI)
     if a.cmd == "update":
         import tempfile
         from . import update
