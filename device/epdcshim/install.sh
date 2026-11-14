@@ -4,15 +4,18 @@
 # Takes effect on the next boot.
 set -eu
 cd "$(dirname "$0")"
+SRC=${SRC:-.}                 # source dir: this dir, or an extracted glue bundle (booxctl update glue)
+VERSION=${VERSION:-dev}
+VCODE=$(echo "$VERSION" | awk -F. 'NF==4 && $1 ~ /^[0-9]+$/ {printf "%d", ($1*10000+$2*100+$3)*100+$4; ok=1} END {if (!ok) print 0}')
 S=${BOOX_SERIAL:-$(head -n1 ~/.config/boox/serial 2>/dev/null)}; [ -n "$S" ] || { echo "set BOOX_SERIAL or write the serial to ~/.config/boox/serial" >&2; exit 1; }
 export ADB_LIBUSB=1
 A="adb -s $S"
-H_SO=$(shasum -a 256 libbooxepdc.so | cut -d' ' -f1)
-H_PF=$(shasum -a 256 module/post-fs-data.sh | cut -d' ' -f1)
-H_SV=$(shasum -a 256 module/service.sh | cut -d' ' -f1)
-$A push libbooxepdc.so /data/local/tmp/libbooxepdc.so >/dev/null
-$A push module/post-fs-data.sh /data/local/tmp/boox-post-fs-data.sh >/dev/null
-$A push module/service.sh /data/local/tmp/boox-service.sh >/dev/null
+H_SO=$(shasum -a 256 "$SRC/libbooxepdc.so" | cut -d' ' -f1)
+H_PF=$(shasum -a 256 "$SRC/module/post-fs-data.sh" | cut -d' ' -f1)
+H_SV=$(shasum -a 256 "$SRC/module/service.sh" | cut -d' ' -f1)
+$A push "$SRC/libbooxepdc.so" /data/local/tmp/libbooxepdc.so >/dev/null
+$A push "$SRC/module/post-fs-data.sh" /data/local/tmp/boox-post-fs-data.sh >/dev/null
+$A push "$SRC/module/service.sh" /data/local/tmp/boox-service.sh >/dev/null
 $A shell '/debug_ramdisk/su -c "
 set -e
 # staged files sit in shell-writable /data/local/tmp: verify hashes before copying into the root-owned module
@@ -30,7 +33,7 @@ cp /data/local/tmp/libbooxepdc.so \$L.new
 chmod 644 \$L.new
 chcon u:object_r:vendor_file:s0 \$L.new
 mv -f \$L.new \$L
-printf \"id=boox_epdc\nname=Boox EPDC shim\nversion=v2\nversionCode=2\nauthor=boox\ndescription=E-ink glue: composer EPDC shim, GPU composition, front light\n\" > \$M/module.prop
+printf \"id=boox_epdc\nname=Boox EPDC shim\nversion='"$VERSION"'\nversionCode='"$VCODE"'\nauthor=boox\ndescription=E-ink glue: composer EPDC shim, GPU composition, front light\n\" > \$M/module.prop
 cp /data/local/tmp/boox-post-fs-data.sh \$M/post-fs-data.sh
 cp /data/local/tmp/boox-service.sh \$M/service.sh
 chmod 755 \$M/post-fs-data.sh \$M/service.sh

@@ -45,8 +45,19 @@ def main(argv=None):
     pr.add_argument("--version", required=True, help="YYYY.MM.DD.N")
     pr.add_argument("--publish", action="store_true", help="create GitHub Release glue-v<version>")
     pr.add_argument("--repo", default="jonaseck2/boox-note5")
+    pu = sub.add_parser("update", help="install a glue release on the tablet (verify, precheck, install, reboot, post-check)")
+    pu.add_argument("kind", choices=["glue"])
+    g = pu.add_mutually_exclusive_group(required=True)
+    g.add_argument("--tag", help="GitHub release tag, e.g. glue-v2026.11.14.1")
+    g.add_argument("--bundle", type=Path, help="local boox-glue-<version>.zip (with its .sha256 next to it)")
+    pu.add_argument("--repo", default="jonaseck2/boox-note5")
     a = ap.parse_args(argv)
     dev = Device(Runner())
+    if a.cmd == "update":
+        import tempfile
+        from . import update
+        bundle = a.bundle or update.fetch(a.tag, a.repo, Path(tempfile.mkdtemp(prefix="boox-dl-")))
+        return 0 if update.update_glue(dev, bundle, Path(__file__).resolve().parents[2]) else 1
     if a.cmd == "release":
         import subprocess
         from . import release
