@@ -29,3 +29,19 @@ def test_precheck_reports_no_root(fake):
     fake.on("su -c 'id'", stdout=b"uid=2000(shell)\n")
     probs = update.precheck(Device(_ok(fake)))
     assert any("root" in p for p in probs)
+
+
+BEFORE = """-r--r----- 1 system log  131060 1970-01-01 03:19 console-ramoops-0
+-r--r--r-- 1 root   root 131036 2026-11-14 16:08 dmesg-ramoops-1
+-r--r----- 1 system log  131060 1970-01-01 03:19 pmsg-ramoops-0
+"""
+
+
+def test_normal_reboot_is_not_a_panic():
+    after = BEFORE.replace("03:19", "03:25")          # console/pmsg rotate on every boot
+    assert update.new_panics(BEFORE, after) == []
+
+
+def test_new_dmesg_record_is_a_panic():
+    after = BEFORE + "-r--r--r-- 1 root   root 131036 2026-11-14 18:30 dmesg-ramoops-0\n"
+    assert update.new_panics(BEFORE, after) == ["dmesg-ramoops-0"]

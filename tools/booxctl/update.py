@@ -38,6 +38,14 @@ def _pstore(dev) -> str:
     return dev.su("ls -l /sys/fs/pstore/ 2>/dev/null || true")
 
 
+def new_panics(before: str, after: str) -> list:
+    """Kernel panic records (pstore dmesg-ramoops-*) present after but not before. console-/pmsg-ramoops
+    hold the previous boot's logs and change on every boot, so they are not panic evidence."""
+    def recs(listing):
+        return {" ".join(l.split()[-3:]) for l in listing.splitlines() if "dmesg-ramoops" in l}
+    return sorted(r.split()[-1] for r in recs(after) - recs(before))
+
+
 def wait_booted(dev, timeout: float = 180) -> bool:
     end = time.time() + timeout
     while time.time() < end:
@@ -60,8 +68,9 @@ def postcheck(dev, version: str, pstore_before: str) -> list:
     maps = dev.su("grep -c libbooxepdc /proc/$(pidof vendor.qti.hardware.display.composer-service)/maps || true").strip()
     if not maps.isdigit() or int(maps) == 0:
         probs.append("composer does not map libbooxepdc.so")
-    if _pstore(dev) != pstore_before:
-        probs.append("pstore changed: a kernel panic happened during the update boot (see /sys/fs/pstore)")
+    panics = new_panics(pstore_before, _pstore(dev))
+    if panics:
+        probs.append(f"new kernel panic record(s) {panics} during the update boot (see /sys/fs/pstore)")
     return probs
 
 
