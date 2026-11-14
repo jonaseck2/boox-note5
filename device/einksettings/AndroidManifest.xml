@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- E-ink entry in Settings > Display. Settings injects the tile only for SYSTEM apps
+     (SettingsLib TileUtils.loadActivityTiles skips !ResolveInfo.system), so the APK is
+     installed into /system/app through a Magisk module. See README.md. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.boox.einksettings"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <!-- targetSdk 34: avoids forced edge-to-edge (targetSdk 35+), which would draw the
+         framework preference list under the status bar. -->
+    <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="34" />
+
+    <application
+        android:label="E-ink"
+        android:allowBackup="false"
+        android:theme="@android:style/Theme.DeviceDefault.Light">
+
+        <activity
+            android:name=".EinkSettingsActivity"
+            android:label="E-ink"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.android.settings.action.IA_SETTINGS" />
+            </intent-filter>
+            <meta-data
+                android:name="com.android.settings.category"
+                android:value="com.android.settings.category.ia.display" />
+            <meta-data
+                android:name="com.android.settings.title"
+                android:value="E-ink" />
+            <meta-data
+                android:name="com.android.settings.summary"
+                android:value="Contrast, waveform, ghosting clean, full refresh" />
+            <meta-data
+                android:name="com.android.settings.order"
+                android:value="100" />
+        </activity>
+    </application>
+</manifest>

@@ -1,0 +1,6 @@
+id=boox_shellroot
+name=Boox shell root
+version=v1
+versionCode=1
+author=boox project
+description=Grants root to the adb shell (uid 2000) and allows ADB root access, for headless automation.

@@ -1,0 +1,150 @@
+# CLAUDE.md
+
+Boox Note5 (e-ink, SDM662) → current AOSP with Google apps, tuned for e-ink, driven agentically from a Mac
+(adb/EDL, camera feedback loop). Device rules: the `boox-device` skill. This file is loaded into every
+session and every subagent — it's the shared brief. The workflow below comes from the Claude Code template.
+**Owner override (2026-11-09):** commit directly on `main` and push `origin/main`. No feature branches or worktrees in this repo, which overrides the worktree steps below.
+
+## What this template gives you
+
+- **Superpowers** (`superpowers@claude-plugins-official`) — the brainstorm → spec → plan →
+  implement workflow, enabled in `.claude/settings.json`.
+- **A plan convention that doesn't leak tool branding** — plans and specs live in
+  `docs/plans/`. **Override:** whenever a Superpowers skill (`brainstorming`, `writing-plans`)
+  offers to save to a `docs/superpowers/...` path, save to the matching `docs/plans/...` path
+  instead — spec → `docs/plans/YYYY-MM-DD-<topic>-design.md`, plan →
+  `docs/plans/YYYY-MM-DD-<feature>.md`. How plans are *written* is governed by the path-scoped
+  rule [`.claude/rules/plans.md`](.claude/rules/plans.md) (it loads automatically when you work
+  inside `docs/plans/`).
+- **A close-out workflow** — the [`close-out`](.claude/skills/close-out/SKILL.md) skill
+  archives a finished plan with verification evidence.
+- **A roadmap** — [`docs/ROADMAP.md`](docs/ROADMAP.md) is the human-facing index of what's active
+  and shipped.
+- **An agent mandate** — [`.claude/rules/mandate.md`](.claude/rules/mandate.md) says when to act
+  outright vs. ask. Bias is toward doing the work; over-asking is the failure mode.
+- **Workflow skills** — [`inventory`](.claude/skills/inventory/SKILL.md) (start a session by
+  seeing what's in flight), [`audit-validation`](.claude/skills/audit-validation/SKILL.md)
+  (verify claims about the code by grepping before you plan),
+  [`worktree-first`](.claude/skills/worktree-first/SKILL.md) (when a clone is shared by more than
+  one session, the primary checkout stays on `main`; do every commit-producing task in a worktree
+  — never `git checkout` a feature branch in the shared clone),
+  [`subagent-handoff`](.claude/skills/subagent-handoff/SKILL.md) (carry intent into a dispatched
+  subagent and prove the outcome before marking it done — the controller commits, subagents
+  edit+test only),
+  [`manual-steps`](.claude/skills/manual-steps/SKILL.md) (collect every human-only step into a
+  runbook checklist before calling work delivered, never silently drop one),
+  [`handoff-style`](.claude/skills/handoff-style/SKILL.md) (how that runbook, an issue, a PR
+  description or a README actually reads — the eight Simplified Technical English rules, and the
+  skeletons that make them checkable), and
+  [`retro`](.claude/skills/retro/SKILL.md) (periodically check that shipped work honored the
+  rules, and fix the rules that didn't fire).
+
+## First-time setup (each person, once)
+
+The plugins are *enabled* in `.claude/settings.json`, but Claude Code installs them on first
+use. On your first session, if prompted to install `superpowers@claude-plugins-official`,
+accept. Or run `/plugin install superpowers@claude-plugins-official` yourself. After that it
+stays enabled across sessions.
+
+## Forking this into a real project (once, when you start building)
+
+The moment this stops being "the template" and becomes *your project*, make it yours — don't let
+template boilerplate linger (it will read as stale and mislead you later):
+
+- **Rewrite the top of this file** (line 3) to describe *your* project, not "a starter template."
+- **Replace `README.md`** with a real README for your project — what it does, how to build and
+  run it, its status. Don't copy the template's workflow essay into your repo; keep the workflow
+  by *linking back* to the template repo instead. A README that still describes the template (or
+  an old version of the project) is the single most common drift — `close-out` step 5 guards it,
+  but start it right here.
+- Keep `.claude/` (rules, skills) — that's the workflow you're keeping. As you improve it, push
+  those improvements back to the template so the next project inherits them.
+
+## The workflow — verification first
+
+The one lesson behind this template: **get verification in early.** A project you can prove
+works end-to-end is a project you can ship agentically without second-guessing. So:
+
+1. **Brainstorm.** Start with the `superpowers:brainstorming` skill. Use stream-of-thought —
+   just write what you're thinking and react to what comes back until you like the shape. The
+   spec is saved to `docs/plans/YYYY-MM-DD-<topic>-design.md`. Commit it immediately.
+2. **Plan.** `superpowers:writing-plans` turns the spec into a checkbox plan in `docs/plans/`.
+   Every plan opens with **Goal**, **Scope**, **Verification** (see the rule). The verification
+   must be something *runnable* — a test or a command with expected output — not "looks right."
+   Commit the plan immediately, before creating a worktree.
+3. **Implement — always in a dedicated worktree.** Create one with `superpowers:using-git-worktrees`
+   and do *all* implementation there; never implement a plan on the primary checkout. This is not
+   optional. A worktree has its own HEAD, so a second concurrent session — or a dispatched agent —
+   sharing the clone can't switch your branch or revert your commit out from under you. **One
+   worktree per session; never run two implementation sessions in the same checkout.** Drive tasks
+   with `superpowers:subagent-driven-development`, and for every dispatch follow
+   [`subagent-handoff`](.claude/skills/subagent-handoff/SKILL.md): carry the goal in, prove the
+   outcome before marking done, and before each commit confirm the worktree is on its own branch
+   (not `main`). Keep the verification check green.
+4. **Close out.** When every box is `- [x]`, run the [`close-out`](.claude/skills/close-out/SKILL.md)
+   skill: capture evidence, archive the plan (and its design spec) to `docs/plans/archive/`, update
+   the roadmaps and the README. Remember: green tests mean the code works, not that anyone can use
+   it yet — if getting it to its users is a separate step, that step is still open work.
+5. **Capture what you learned.** When you land on a pattern or convention worth keeping, ask
+   Claude to turn it into a skill (`skill-creator`) or a rule in `.claude/rules/`. A
+   design-driving *fact about your environment* (a setting, a confirmed absence, a verified
+   permission) goes in a description-matched skill or a `docs/runbooks/` entry, never only in a
+   plan that will archive — see [`.claude/rules/knowledge-capture.md`](.claude/rules/knowledge-capture.md),
+   which also says to consult skills/runbooks before re-asking the human a settled fact. Every few
+   plans, run [`retro`](.claude/skills/retro/SKILL.md) to catch workflow drift and fix the rules
+   that didn't fire. The template gets smarter with each project.
+
+## The always-on context budget
+
+`CLAUDE.md`, the non-path-scoped `.claude/rules/*.md`, and every skill's `description`/`when_to_use`
+are loaded **before any work starts, in every session and every dispatched subagent**. Nothing
+measures that by default, so it grows by accretion — every retro adds a rule and none removes one.
+
+```bash
+python3 scripts/check_context_budget.py     # prints the table, enforces the ceiling
+```
+
+Stdlib only, and already wired into this repo's own gate
+([`.github/workflows/gate.yml`](.github/workflows/gate.yml), which runs on every PR). When you fork,
+**add your project's tests and linter to that same job** rather than leaving the budget check as
+something someone has to remember to run. **When it fails, cut on facts vs behavioural rules:**
+
+- **Facts stay.** An id, a path, a gotcha, the gate command — anything the model cannot derive.
+  A weaker model tier needs these *more*, not less.
+- **Behavioural scaffolding goes.** Exhortations to verify, to not over-ask, to report faithfully.
+  Current-generation models do these unprompted, and the instructions now cost tokens without
+  improving quality ([Prompting Claude Opus 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5)).
+- **Prove each deletion:** stub the line out, run the case it was written for, keep it deleted only
+  if behaviour holds. ⚠️ Restore from a **copy** (`cp x x.bak`), never `git checkout <file>` — that
+  discards all unstaged work on the file.
+
+The same script also warns per skill **body**, which the budget never counts: a loaded skill stays in
+context across turns, and auto-compaction re-attaches only its first ~5,000 tokens. Past that, its
+tail is silently unreachable — a fact written there is indistinguishable, later, from never written.
+The warning names how many trailing lines to move into `reference/`.
+
+[`retro`](.claude/skills/retro/SKILL.md) owns the recurring prune; without it the budget re-inflates.
+Writing instructions more than one model reads:
+[`cross-model-prompting`](.claude/skills/cross-model-prompting/SKILL.md).
+
+## Conventions
+
+- **Plans & specs:** `docs/plans/` — see [`.claude/rules/plans.md`](.claude/rules/plans.md). This
+  is the authoritative rule; read it before writing or archiving a plan.
+- **Lagom over-engineering.** Build the smallest version that's shippable and verifiable. Add
+  structure when a real need shows up, not in anticipation.
+- **Evidence over assertion.** "Tests pass" means you ran them and saw the count. Don't claim
+  done without proof.
+- **A NEW test is not evidence until you have seen it RED without the fix.** Stub the fix out, watch
+  it fail, restore, watch it pass. ⚠️ Restore from a **copy** (`cp x x.bak` → break → test →
+  `cp x.bak x`) — `git checkout <file>` discards *all* unstaged work on that file, which has wiped a
+  finished implementation. Two failures this is the only thing that catches: a test that **never
+  reaches the path it names** passes the broken implementation too *and reads as coverage*; and a
+  **guard** needs its detector proven as well — mutate the thing it guards against and confirm the
+  guard fires.
+- **Done means delivered.** Think end-to-end: the goal isn't "the code works," it's "the people
+  it's for can use it." Verification proves the first; delivery (publish/deploy/hand-off) closes
+  the second. A build plan closing out is not the project finishing. When delivery depends on a
+  step only a human can perform (an OAuth consent, a secret value, a cloud role, a DNS record, a
+  cross-repo PR), surface it as an explicit checklist and track it to done — never silently drop
+  it. See [`manual-steps`](.claude/skills/manual-steps/SKILL.md).
