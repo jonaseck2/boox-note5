@@ -51,8 +51,24 @@ def main(argv=None):
     g.add_argument("--tag", help="GitHub release tag, e.g. glue-v2026.11.14.1")
     g.add_argument("--bundle", type=Path, help="local boox-glue-<version>.zip (with its .sha256 next to it)")
     pu.add_argument("--repo", default="jonaseck2/boox-note5")
+    pw = sub.add_parser("wallpaper", help="install an e-ink wallpaper (default: The Great Wave, light print); reboots")
+    pw.add_argument("which", nargs="?", default="wave", choices=["wave", "white"])
     a = ap.parse_args(argv)
     dev = None if a.cmd == "release" else Device(Runner())   # release needs no tablet (CI)
+    if a.cmd == "wallpaper":
+        import tempfile
+        from . import wallpaper
+        d = Path(tempfile.mkdtemp(prefix="boox-wp-"))
+        if a.which == "wave":
+            png = wallpaper.light_print(wallpaper.fetch_wave(d / "wave.jpg"), d / "wave.png")
+        else:
+            import numpy as np, cv2
+            png = d / "white.png"
+            cv2.imwrite(str(png), np.full((1404, 1872, 3), 255, np.uint8))
+        wallpaper.install(dev, png)
+        dev.reboot()
+        print(f"{a.which} wallpaper installed; rebooting to apply")
+        return 0
     if a.cmd == "update":
         import tempfile
         from . import update
