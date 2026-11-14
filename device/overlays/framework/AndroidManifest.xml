@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- E-ink: shade_panel_scrim_color (the launcher's blur-style app-drawer background, #C6C6C6 on this
+     build, and the shade panel scrim) becomes white. Found by booxctl audit. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.boox.eink.overlay.framework">
+    <overlay android:targetPackage="android" android:isStatic="true" android:priority="10" />
+    <application android:hasCode="false" />
+</manifest>

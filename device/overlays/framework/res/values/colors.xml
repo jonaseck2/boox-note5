@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- blur-style surfaces: the launcher's app drawer (AllAppsBlurStyle) and the shade panel scrim -->
+    <color name="shade_panel_scrim_color">#FFFFFFFF</color>
+    <color name="surface_effect_0_color">#FFFFFFFF</color>
+    <color name="surface_effect_1_color">#FFFFFFFF</color>
+    <color name="surface_effect_2_color">#FFFFFFFF</color>
+    <color name="surface_effect_3_color">#FFFFFFFF</color>
+</resources>

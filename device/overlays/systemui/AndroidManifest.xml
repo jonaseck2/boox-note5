@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- E-ink: the notification shade / quick settings scrim and panel become white instead of a
+     translucent grey over the wallpaper. Found by booxctl audit (QS tiles 140 on 212). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.boox.eink.overlay.systemui">
+    <overlay android:targetPackage="com.android.systemui" android:isStatic="true" android:priority="10" />
+    <application android:hasCode="false" />
+</manifest>

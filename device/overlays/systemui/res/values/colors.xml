@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="notification_scrim_base">#FFFFFFFF</color>
+    <color name="notification_scrim_fallback">#FFFFFFFF</color>
+    <color name="shade_panel_fallback">#FFFFFFFF</color>
+</resources>

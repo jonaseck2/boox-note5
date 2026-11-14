@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- E-ink: the app drawer background (allAppsScrimColor -> materialColorSurfaceDim, a dimmed grey)
+     becomes white. Found by booxctl audit: labels sat grey-on-grey (paper 202). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.boox.eink.overlay.launcher">
+    <overlay android:targetPackage="com.android.launcher3" android:isStatic="true" android:priority="10" />
+    <application android:hasCode="false" />
+</manifest>
