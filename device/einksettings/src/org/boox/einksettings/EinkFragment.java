@@ -29,6 +29,8 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
     static final String CLEAN_MODE = "persist.boox.epdc.clean_mode";
     static final String CLEAN_AFTER = "persist.boox.epdc.clean_after";
     static final String LIST_MODE = "persist.boox.epdc.list_mode";
+    static final String LUT_ADAPTIVE = "persist.boox.lut.adaptive";
+    static final String LUT_BOLD = "persist.boox.lut.bold";
 
     /** Shim defaults (epdcshim.c prop_int fallbacks). */
     private static final Map<String, Integer> DEFAULTS = new LinkedHashMap<>();
@@ -39,6 +41,8 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
         DEFAULTS.put(CLEAN_MODE, 16);   // 0x10: full update, the only mode that cleans ghosting
         DEFAULTS.put(CLEAN_AFTER, 30);
         DEFAULTS.put(LIST_MODE, 2308);
+        DEFAULTS.put(LUT_ADAPTIVE, 1);
+        DEFAULTS.put(LUT_BOLD, 1);
     }
 
     /**
@@ -67,7 +71,7 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
     private final Map<String, Integer> current = new HashMap<>(DEFAULTS);
 
     private Preference status;
-    private SwitchPreference lutEnable;
+    private SwitchPreference lutEnable, adaptive, bold;
     private ListPreference black, white, clean, waveform;
     private Preference refresh, reset, update;
 
@@ -91,6 +95,18 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
         lutEnable.setSummaryOn("Greys are stretched between the black and white points");
         lutEnable.setSummaryOff("Off: the panel shows the original greys");
         add(contrast, lutEnable);
+        adaptive = new SwitchPreference(a);
+        adaptive.setKey(LUT_ADAPTIVE);
+        adaptive.setTitle("Photo-aware contrast");
+        adaptive.setSummaryOn("Photos get a gentler curve, text and UI the strong one");
+        adaptive.setSummaryOff("One curve for everything");
+        add(contrast, adaptive);
+        bold = new SwitchPreference(a);
+        bold.setKey(LUT_BOLD);
+        bold.setTitle("Bolder text in all apps");
+        bold.setSummaryOn("Thin strokes are thickened by one pixel, also in web pages");
+        bold.setSummaryOff("Text as the app draws it");
+        add(contrast, bold);
         black = list(contrast, LUT_BLACK, "Black point",
                 "Greys at or below this level show as black. Higher = darker text.",
                 BLACK_VALUES, BLACK_VALUES);
@@ -119,7 +135,7 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
 
         reset = new Preference(a);
         reset.setTitle("Reset to defaults");
-        reset.setSummary("Black 40, white 235, waveform 4, clean after 30");
+        reset.setSummary("Black 40, white 235, photo-aware, bold, waveform 4, clean after 30");
         reset.setOnPreferenceClickListener(p -> {
             write(DEFAULTS, "Defaults restored");
             return true;
@@ -175,7 +191,7 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
     }
 
     private void setControlsEnabled(boolean on) {
-        for (Preference p : new Preference[]{lutEnable, black, white, clean, waveform, refresh, reset, update}) {
+        for (Preference p : new Preference[]{lutEnable, adaptive, bold, black, white, clean, waveform, refresh, reset, update}) {
             p.setEnabled(on);
         }
     }
@@ -218,6 +234,8 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
 
     private void show() {
         lutEnable.setChecked(current.get(LUT_ENABLE) != 0);
+        adaptive.setChecked(current.get(LUT_ADAPTIVE) != 0);
+        bold.setChecked(current.get(LUT_BOLD) != 0);
         showList(black, current.get(LUT_BLACK));
         showList(white, current.get(LUT_WHITE));
         if (current.get(CLEAN_MODE) == 0) {
@@ -261,8 +279,8 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
     public boolean onPreferenceChange(Preference p, Object nv) {
         Map<String, Integer> w = new LinkedHashMap<>();
         String key = p.getKey();
-        if (p == lutEnable) {
-            w.put(LUT_ENABLE, Boolean.TRUE.equals(nv) ? 1 : 0);
+        if (p == lutEnable || p == adaptive || p == bold) {
+            w.put(key, Boolean.TRUE.equals(nv) ? 1 : 0);
         } else if (p == clean) {
             if (CLEAN_OFF.equals(nv)) {
                 // clean_mode=0 disables the clean. clean_after=0 does NOT: the shim then
