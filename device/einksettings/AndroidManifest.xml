@@ -4,8 +4,8 @@
      installed into /system/app through a Magisk module. See README.md. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.boox.einksettings"
-    android:versionCode="3"
-    android:versionName="1.2">
+    android:versionCode="4"
+    android:versionName="1.3">
 
     <!-- targetSdk 34: avoids forced edge-to-edge (targetSdk 35+), which would draw the
          framework preference list under the status bar. -->

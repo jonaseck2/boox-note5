@@ -30,6 +30,9 @@ def _glue_sources(repo_root: Path) -> dict:
     for p in files.values():
         if not p.is_file():
             raise FileNotFoundError(p)
+    apk = repo_root / "device/einksettings/build/EinkSettings.apk"   # optional: needs the Android SDK
+    if apk.is_file():
+        files["EinkSettings.apk"] = apk
     return dict(sorted(files.items()))
 
 

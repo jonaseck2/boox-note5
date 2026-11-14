@@ -32,6 +32,7 @@ final class Updater {
     static final String MODULE = "/data/adb/modules/boox_epdc";
     private static final Pattern VERSION = Pattern.compile("^(\\d{4})\\.(\\d{2})\\.(\\d{2})\\.(\\d{1,2})$");
     private static final String[] FILES = {"libbooxepdc.so", "module/post-fs-data.sh", "module/service.sh"};
+    static final String APK = "EinkSettings.apk";   // optional: the settings app itself
 
     static final class Release {
         final String version, zipUrl, shaUrl;
@@ -116,6 +117,19 @@ final class Updater {
         } catch (org.json.JSONException e) {
             throw new IOException("bad manifest: " + e.getMessage());
         }
+        boolean hasApk = false;
+        try {
+            JSONObject list = new JSONObject(new String(mf, StandardCharsets.UTF_8)).getJSONObject("files");
+            if (list.has(APK)) {
+                byte[] body = files.get(APK);
+                if (body == null || !hex(sha256(body)).equals(list.getJSONObject(APK).getString("sha256"))) {
+                    throw new IOException("hash mismatch: " + APK);
+                }
+                hasApk = true;
+            }
+        } catch (org.json.JSONException e) {
+            throw new IOException("bad manifest: " + e.getMessage());
+        }
         if (!new String(files.get("module/post-fs-data.sh"), StandardCharsets.UTF_8).contains("boox_boot_count")) {
             throw new IOException("refusing: the new module has no boot guard");
         }
@@ -124,6 +138,10 @@ final class Updater {
         new File(stage, "module").mkdirs();
         for (String f : FILES) {
             try (FileOutputStream o = new FileOutputStream(new File(stage, f))) { o.write(files.get(f)); }
+        }
+        if (hasApk) {
+            // kept outside the staging dir (the install script deletes it); installed on Restart
+            try (FileOutputStream o = new FileOutputStream(new File(dir, APK))) { o.write(files.get(APK)); }
         }
         long vc = code(rel.version);
         String s = stage.getAbsolutePath();
@@ -145,7 +163,7 @@ final class Updater {
                 + "grep '^version=' $M/module.prop\n";
         Root.Result r = Root.run(script);
         if (!r.ok()) throw new IOException("install failed: " + r.out.trim());
-        return "Installed glue " + rel.version + ". Restart to apply.";
+        return "Installed glue " + rel.version + (hasApk ? " (with a new settings app)" : "") + ". Restart to apply.";
     }
 
     private static byte[] get(String url) throws IOException {
@@ -188,3 +206,4 @@ final class Updater {
         return s.toString();
     }
 }
+

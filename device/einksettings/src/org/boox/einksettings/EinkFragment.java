@@ -371,12 +371,19 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
                     new android.app.AlertDialog.Builder(getActivity())
                             .setTitle("Restart now?")
                             .setMessage(m + " The display shim loads at boot.")
-                            .setPositiveButton("Restart", (d, w) -> runRoot("svc power reboot || reboot", "Restarting"))
+                            .setPositiveButton("Restart", (d, w) -> restartAfterUpdate())
                             .setNegativeButton("Later", null)
                             .show();
                 }
             });
         });
+    }
+
+    /** Installing our own package kills this process, so the root shell runs detached: apk, then reboot. */
+    private void restartAfterUpdate() {
+        String apk = new java.io.File(getActivity().getCacheDir(), Updater.APK).getAbsolutePath();
+        runRoot("A='" + apk + "'; nohup setsid sh -c \"sleep 1; [ -f \\\"$A\\\" ] && pm install -r \\\"$A\\\"; "
+                + "rm -f \\\"$A\\\"; svc power reboot || reboot\" >/dev/null 2>&1 </dev/null &", "Restarting");
     }
 
     private void runRoot(String script, String done) {

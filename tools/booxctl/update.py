@@ -98,6 +98,11 @@ def update_glue(dev, bundle: Path, repo_root: Path, log=print) -> bool:
     env = {**os.environ, "SRC": str(work), "VERSION": version, "BOOX_SERIAL": dev.serial}
     subprocess.run([str(repo_root / "device/epdcshim/install.sh")], env=env, check=True, capture_output=True)
     subprocess.run(["sh", str(work / "eink-settings.sh"), dev.serial], env=env, check=True, capture_output=True)
+    apk = work / "EinkSettings.apk"
+    if apk.is_file() and "package:" in dev.shell("pm path org.boox.einksettings"):
+        # an update of the system package (first install goes through device/einksettings/install.sh)
+        dev.adb("install", "-r", str(apk), timeout=120)
+        log("settings app updated")
     log("installed; rebooting")
     dev.reboot()
     time.sleep(5)

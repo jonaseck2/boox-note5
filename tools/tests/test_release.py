@@ -152,3 +152,15 @@ def test_verify_bundle_rejects_bad_sidecar(tmp_path):
     side.write_text("0" * 64 + f"  {z.name}\n")
     with pytest.raises(ValueError, match="sha256"):
         release.verify_bundle(z, tmp_path / "x")
+
+
+def test_settings_apk_ships_when_built(tmp_path):
+    repo = _fake_repo(tmp_path / "repo")
+    apk = repo / "device/einksettings/build/EinkSettings.apk"
+    apk.parent.mkdir(parents=True)
+    apk.write_bytes(b"PK fake apk")
+    z = release.build_glue_bundle(repo, tmp_path / "out", "2026.11.14.1")
+    with zipfile.ZipFile(z) as zf:
+        assert "EinkSettings.apk" in zf.namelist()
+        m = json.loads(zf.read("manifest.json"))
+    assert m["files"]["EinkSettings.apk"]["sha256"] == _sha(b"PK fake apk")
