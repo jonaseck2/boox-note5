@@ -8,7 +8,6 @@ done.
 
 _Actively building. Link the active plan._
 
-- [CI-built glue releases](plans/2026-11-14-ci-built-releases.md)
 - E-ink tuning on the running system (no plan file. Facts: `docs/runbooks/eink-interface.md`): Chrome reading on Omni and HN, ghosting policy. Design: [e-ink AOSP](plans/2026-11-08-eink-aosp-design.md)
 
 ## Next

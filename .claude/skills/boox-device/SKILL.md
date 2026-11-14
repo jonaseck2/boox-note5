@@ -43,5 +43,6 @@ Facts: [`docs/runbooks/device-facts.md`](../../../docs/runbooks/device-facts.md)
 - `epd clean` (full refresh via `panel_clean`) · `epd mode normal|speed|a2|x` (`/dev/ebc` ioctl) · `epd probe`.
 - Root: `adb shell su -c ...`. EDL: start `edl` before `adb reboot edl`, outside the sandbox. Procedure: `docs/runbooks/device-facts.md`.
 - `flicker <dir> --action '<adb shell cmd>'` — camera flicker meter (30 fps, `flash_area`). `tap "<text>"` — tap an element by text or content-desc.
+- Preferred release path: GitHub Actions `release` workflow (`gh workflow run release.yml -R jonaseck2/boox-note5 -f version=…`). It needs no device libraries (stubs) and signs with the secret `EINK_KEYSTORE_B64`. The keystore is backed up in the owner's Drive at `My Drive/boox/`.
 - `release glue --version YYYY.MM.DD.N [--publish]` · `update glue --tag glue-v… | --bundle zip` — glue releases on `jonaseck2/boox-note5` (verify, precheck, install, reboot, post-check). On the tablet: Settings > Display > E-ink > Check for updates.
 - `booxctl.lp` (liblp super metadata rebuild) · `booxctl.bootimg` (add ramdisk files to boot v2) · `booxctl dsu …` (DSU; unusable here, kept for reference).

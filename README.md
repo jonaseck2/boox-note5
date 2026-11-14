@@ -19,6 +19,9 @@ whole loop over adb and Qualcomm EDL. A camera facing the panel scores what a pe
 - Settings → Display → **E-ink** (`device/einksettings`) sets contrast, waveform and the ghosting
   clean, and triggers a full refresh.
 - The brightness slider drives the front light, and Night Light warms it.
+- Releases are built by GitHub Actions: Actions → **release** → Run workflow with a version `YYYY.MM.DD.N`.
+  The shim links against generated stubs (no device libraries needed), and the APK is signed with the
+  key in the repo secret `EINK_KEYSTORE_B64`.
 - Updates: `booxctl update glue --tag glue-v<version>` installs a verified glue release from this repo's
   GitHub Releases, then reboots and runs a post-check. On the tablet itself: Settings → Display → E-ink →
   Check for updates. System updates go over USB/EDL

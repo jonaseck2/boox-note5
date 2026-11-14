@@ -1,6 +1,6 @@
 # CI-built glue releases — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** A glue release (display shim, module scripts, settings app) is built and published by GitHub Actions on the public repo from one "Run workflow" click with a version number. It needs no Mac and no proprietary file. The tablet installs that release like any other.
 
@@ -34,17 +34,38 @@ Out:
 
 ### Task 1: stub sysroot + portable shim build
 
-- [ ] `device/epdcshim/stubs/symbols.txt` (lib, symbol, version) and `stubs/mkstubs.sh` → `build/stubs/*.so`.
-- [ ] `build.sh`: compiler and linker overrides, `SYSROOT` defaulting to `sysroot/`, else the stubs.
-- [ ] Diff check against the real-sysroot build, output pasted.
-- [ ] Commit.
+- [x] `device/epdcshim/stubs/symbols.txt` (lib, symbol, version) and `stubs/mkstubs.sh` → `build/stubs/*.so`.
+- [x] `build.sh`: compiler and linker overrides, `SYSROOT` defaulting to `sysroot/`, else the stubs.
+- [x] Diff check against the real-sysroot build, output pasted.
+- [x] Commit.
 
 ### Task 2: portable APK build + release workflow
 
-- [ ] `einksettings/build.sh`: Linux build-tools zip (SHA-1 from `repository2-3.xml`), `EINK_KSPASS`.
-- [ ] `.github/workflows/release.yml`.
-- [ ] Commit, run the workflow for `2026.11.14.7`, check the release assets.
+- [x] `einksettings/build.sh`: Linux build-tools zip (SHA-1 from `repository2-3.xml`), `EINK_KSPASS`.
+- [x] `.github/workflows/release.yml`.
+- [x] Commit, run the workflow for `2026.11.14.7`, check the release assets.
 
 ### Task 3: install the CI release on the tablet
 
-- [ ] `booxctl update glue --tag glue-v2026.11.14.7` → post-check OK. Then close out.
+- [x] `booxctl update glue --tag glue-v2026.11.14.7` → post-check OK. Then close out.
+
+---
+
+## Outcome (closed 2026-11-14)
+
+Rulings:
+- The plan asked for identical imports. The result is stronger: the stub-linked shim is byte-identical to the real-sysroot build (same compiler). CI's clang differs from Homebrew's, so the CI binary differs in bytes (19080 vs 19296). It was verified on the device instead.
+- `-Wl,--no-undefined` added (Review Focus 1), mutation-tested.
+- `booxctl release` constructs no `Device`, so CI needs no serial.
+
+Evidence:
+
+```
+local: cmp real-sysroot build vs stub build -> identical; removing 'memset' from symbols.txt -> "ld.lld: error: undefined symbol: memset"
+CI: github.com/jonaseck2/boox-note5/actions/runs/43625213240 -> success
+release glue-v2026.11.14.7: zip OK against its sidecar; 6 entries incl. EinkSettings.apk
+$ booxctl update glue --tag glue-v2026.11.14.7
+bundle ... 5 files verified / precheck OK / settings app updated / installed; rebooting / post-check OK: glue 2026.11.14.7 running
+app lastUpdateTime 2026-11-14 19:12:51 (the CI-signed APK was accepted as an update, so the key matches); camera: HN drawn correctly
+pytest -q tools -> 76 passed; gate CI green
+```

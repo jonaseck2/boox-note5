@@ -5,6 +5,7 @@ records — what shipped, and the verification evidence that it worked. Newest f
 
 <!-- close-out appends: - YYYY-MM-DD [<feature>](<file>.md) — one-line outcome -->
 
+- 2026-11-14 [CI-built glue releases](2026-11-14-ci-built-releases.md) — GitHub Actions "release" workflow builds the shim (stub sysroot, byte-identical) and the signed APK and publishes. 2026.11.14.7 built by CI runs on the tablet
 - 2026-11-14 On-device glue updates (no plan file, runbook: eink-interface.md) — "Check for updates" in Settings > Display > E-ink installs verified releases. 2026.11.14.3 installed from the tablet, post-check OK. Night Light drives the front-light colour temperature
 - 2026-11-14 [`booxctl update glue` + first glue release](2026-11-14-booxctl-update-glue.md) — one-command verified glue updates from GitHub Releases (tamper-proofed, precheck, post-check). Releases 2026.11.14.1 and .2 published, the tablet runs .2
 - 2026-11-14 [Phase 2: generic Android on the Note5](2026-11-09-phase2-gsi-via-dsu.md) — LineageOS 23.2 (Android 16, GApps) permanent via a rebuilt `super` (DSU impossible on this device). Panel driven by the composer EPDC shim: region updates, wf4, adaptive tone curve, panic guards, boot guard
