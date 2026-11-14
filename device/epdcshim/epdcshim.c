@@ -35,6 +35,7 @@ extern void *malloc(unsigned long);
 extern void free(void *);
 extern void *memcpy(void *, const void *, unsigned long);
 extern int memcmp(const void *, const void *, unsigned long);
+extern void *memset(void *, int, unsigned long);
 struct pollfd { int fd; short events, revents; };
 extern int poll(struct pollfd *, unsigned long, int);
 struct timespec { long tv_sec, tv_nsec; };
@@ -139,14 +140,17 @@ static void fill_lut(unsigned char *lut, int bl, int wh) {
     }
 }
 
-static void build_lut(void) {
+static int build_lut(void) {                              // returns 1 when the curves changed
     int bl = prop_int("persist.boox.lut.black", 40), wh = prop_int("persist.boox.lut.white", 235);
     int pb = prop_int("persist.boox.lut.pblack", 16), pw = prop_int("persist.boox.lut.pwhite", 245);
     int key = ((bl * 256 + wh) * 256 + pb) * 256 + pw;
-    if (key == g_lut_key) return;
+    int adaptive = prop_int("persist.boox.lut.adaptive", 1), pct = prop_int("persist.boox.lut.photo_pct", 35);
+    key = key * 31 + adaptive * 1000 + pct;
+    if (key == g_lut_key) return 0;
     g_lut_key = key;
     fill_lut(g_lut, bl, wh);
     fill_lut(g_lutp, pb, pw);
+    return 1;
 }
 
 static inline u32 luma(u32 p) { return (54 * (p & 255) + 183 * ((p >> 8) & 255) + 19 * ((p >> 16) & 255)) >> 8; }
@@ -169,7 +173,7 @@ static int process_frame(struct fbent *e, int tone, int *rx, int *ry, int *rr, i
         if (!g_prev || !g_raw) { free(g_prev); free(g_raw); g_prev = g_raw = 0; return -1; }
         first = 1;
     }
-    if (tone) build_lut();
+    if (tone && build_lut() && g_raw) memset(g_raw, 0, (unsigned long)rowb * e->h);   // re-map everything
     struct timespec q0, q1, q2, q3;
     clock_gettime(1, &q0);
     u64 sync = 3 /*READ|WRITE, START*/;
@@ -221,6 +225,9 @@ static int process_frame(struct fbent *e, int tone, int *rx, int *ry, int *rr, i
             u32 *pr = (u32 *)(g_raw + (unsigned long)y * rowb);
             u32 *tmp = band[r];
             if (st[r] == 1) { memcpy(row, pm, w * 4); continue; }   // same content: reuse the mapping
+            // State 3: pm is about to hold an OLDER buffer's mapping, so the raw copy no longer matches pm.
+            // Invalidate it, or the next fresh frame (raw == pr) would get this stale mapping written back.
+            if (st[r] == 3) memset(pr, 0, w * 4);
             if (st[r] == 2 && tone) {
                 for (u32 x = 0; x < w; x++) {
                     u32 v = (photo[x / B] ? g_lutp : g_lut)[luma(pr[x])];
