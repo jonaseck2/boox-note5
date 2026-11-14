@@ -100,6 +100,9 @@ def test_missing_source_fails_and_writes_nothing(tmp_path):
 
 
 def test_builds_from_the_real_repo(tmp_path):
+    # libbooxepdc.so is a build product (gitignored, cross-compiled against device libs): absent in CI
+    if not (Path(__file__).resolve().parents[2] / "device/epdcshim/libbooxepdc.so").is_file():
+        pytest.skip("libbooxepdc.so not built (device/epdcshim/build.sh needs the device sysroot)")
     z = release.build_glue_bundle(REPO, tmp_path, "0.0.0-test")
     with zipfile.ZipFile(z) as zf:
         m = json.loads(zf.read("manifest.json"))
