@@ -1,4 +1,4 @@
-"""Release bundles for the GitHub Releases of github.com/jonaseck2/boox.
+"""Release bundles for the GitHub Releases of github.com/jonaseck2/boox-note5.
 
 Class A (glue) bundle: the e-ink glue that `device/epdcshim/install.sh` and `device/eink-settings.sh`
 put on the device, plus `manifest.json` (format 1: kind, version, sha256 + size per file).

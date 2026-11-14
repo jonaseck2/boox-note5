@@ -7,7 +7,7 @@ updates"). Device facts: [device-facts.md](../runbooks/device-facts.md), [gsi-in
 ## Goal
 
 The Note5 keeps receiving new versions of the e-ink glue and new LineageOS GSI builds after 2026-11-14.
-Each version is published as a GitHub Release of the private repository `github.com/jonaseck2/boox`.
+Each version is published as a GitHub Release of the public repository `github.com/jonaseck2/boox-note5` (originally designed for the private `jonaseck2/boox`. The repo went public on 2026-11-14).
 The owner installs a version from the Mac over USB with one command. Glue versions can also install on
 the tablet itself, without the Mac, if the owner accepts one of the access options in § Decisions.
 
@@ -68,7 +68,7 @@ Facts from the runbooks that drive the risk model:
 
 ## Release artifact layout
 
-Two tag families in `jonaseck2/boox`, so a glue release never implies a system change:
+Two tag families in `jonaseck2/boox-note5`, so a glue release never implies a system change:
 
 | Tag | Assets | Notes |
 |---|---|---|
@@ -122,7 +122,7 @@ gives the same release hash on any machine, so a published asset can be checked 
 
 ## USB path: `booxctl update` (Mac)
 
-Mac-side download uses `gh release download <tag> -R jonaseck2/boox`. `gh` is already authenticated with
+Mac-side download uses `gh release download <tag> -R jonaseck2/boox-note5`. `gh` is already authenticated with
 the owner's token (permission ledger, 2026-11-09), so the private repository needs no new credentials.
 
 ### `booxctl update glue [--tag T | --bundle PATH]`
@@ -294,7 +294,7 @@ This option replaces EDL for routine system updates. It still needs the Mac.
 | Option | Rationale for rejection | What would reverse it |
 |---|---|---|
 | Re-host the GSI image as a release asset | 3.29 GiB > 2 GiB per-asset limit. The upstream archive is public and pinned by hash. | Upstream link rot. Then split the image, or host the 1.17 GB `.7z`. |
-| Make `jonaseck2/boox` public | The owner chose a private repository (ledger, 2026-11-09). The repo also references Onyx firmware analysis. | Owner decision |
+| Make `jonaseck2/boox` public (superseded 2026-11-14: the owner chose a fresh public repo, `jonaseck2/boox-note5`) | The owner chose a private repository (ledger, 2026-11-09). The repo also references Onyx firmware analysis. | Owner decision |
 | Unguessable URL (secret gist, random path) for `update.json` | Gives the same exposure as public once the URL leaks, without saying so | — |
 | Live `dd` of `system_b` from root | Blocker 3 above. A crash part-way removes adb and leaves only the EDL cable. | — |
 | A/B in `super` with a shared `vendor` extent | Blocker 1: 2 × 3287 + 493 > 4096 MiB, and 2 × 3287 > 4096 MiB even without `vendor` | A system image ≤ ~1800 MiB |

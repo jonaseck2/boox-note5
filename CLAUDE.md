@@ -4,6 +4,7 @@ Boox Note5 (e-ink, SDM662) → current AOSP with Google apps, tuned for e-ink, d
 (adb/EDL, camera feedback loop). Device rules: the `boox-device` skill. This file is loaded into every
 session and every subagent — it's the shared brief. The workflow below comes from the Claude Code template.
 **Owner override (2026-11-09):** commit directly on `main` and push `origin/main`. No feature branches or worktrees in this repo, which overrides the worktree steps below.
+**The repo is public** (`github.com/jonaseck2/boox-note5`, Apache-2.0, since 2026-11-14). Never commit the device serial (`~/.config/boox/serial`), home IPs, `/Users/...` paths, emails or Wi-Fi names.
 
 ## What this template gives you
 
