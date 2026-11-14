@@ -6,7 +6,7 @@ set -eu
 cd "$(dirname "$0")"
 OUT=${1:?outdir}
 CLANG=${CLANG:-clang}
-LLD=${LLD:-ld.lld}
+LLD=${LLD:-lld}
 mkdir -p "$OUT"
 for lib in $(grep -v '^#' symbols.txt | awk '{print $1}' | sort -u); do
   c="$OUT/$lib.c"; v="$OUT/$lib.map"

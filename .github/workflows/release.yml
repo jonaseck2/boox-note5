@@ -25,12 +25,12 @@ jobs:
         run: echo "$V" | grep -Eq '^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]{1,2}$'
       - name: Toolchain
         run: sudo apt-get update -q && sudo apt-get install -y -q clang lld
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
       - name: Build display shim (stub sysroot)
-        run: CLANG=clang LLD=ld.lld device/epdcshim/build.sh
+        run: CLANG=clang LLD=lld device/epdcshim/build.sh
       - name: Build E-ink settings app
         env:
           EINK_KEYSTORE_B64: ${{ secrets.EINK_KEYSTORE_B64 }}

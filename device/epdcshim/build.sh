@@ -9,7 +9,7 @@ if command -v brew >/dev/null 2>&1 && [ -x "$(brew --prefix llvm 2>/dev/null)/bi
   LLD=${LLD:-$(brew --prefix lld)/bin/ld.lld}
 fi
 CLANG=${CLANG:-clang}
-LLD=${LLD:-ld.lld}
+LLD=${LLD:-lld}
 export CLANG LLD
 SYSROOT=${SYSROOT:-sysroot}
 if [ ! -f "$SYSROOT/libc.so" ]; then
