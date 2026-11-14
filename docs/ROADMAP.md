@@ -8,6 +8,7 @@ done.
 
 _Actively building. Link the active plan._
 
+- [`booxctl update glue` + first glue release](plans/2026-11-14-booxctl-update-glue.md) — design: [OTA](plans/2026-11-14-ota-design.md)
 - E-ink tuning on the running system (no plan file. Facts: `docs/runbooks/eink-interface.md`): Chrome reading on Omni and HN, ghosting policy. Design: [e-ink AOSP](plans/2026-11-08-eink-aosp-design.md)
 
 ## Next
