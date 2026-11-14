@@ -221,3 +221,10 @@ done
 
 - `device/epdcshim/stubs/symbols.txt` lists the shim's imports (library, name, version). `stubs/mkstubs.sh` generates stub `libc/libdl/liblog/libdrm.so` from it (names and versions only). `build.sh` uses `sysroot/` when present, else the stubs.
 - Verified: the stub-linked `libbooxepdc.so` is **byte-identical** to the build against the real device libraries (`cmp`). `-Wl,--no-undefined` makes a missing stub entry a link error (mutation: removing `memset` → `ld.lld: error: undefined symbol: memset`). A new import therefore needs a line in `symbols.txt`.
+
+### Home screen for e-ink (2026-11-14)
+
+- The owner found the Home screen bleak. Its DeskClock "Digital clock" widget draws the time in the theme's light accent tone, which the tone curve (white point 235) maps to white. The search bar's light fill becomes white too.
+- Changes: monochrome theme (`theme_style MONOCHROMATIC`, preset grey), `contrast_level 1.0` (Color contrast: High), themed icons on (Wallpaper & style → Icons; UI only, no setting key found). Both settings are in `device/eink-settings.sh`.
+- Layout via Launcher3's database `/data/data/com.android.launcher3/databases/launcher_6_by_5.db` (table `favorites`): stop the launcher, replace the file (owner `u0_a140`, mode 660, `restorecon`), press HOME. The layout now: search bar, a row with Calendar/Contacts/Gallery/Camera/Music/Files (`cellY` 2), and a dock (`container` -101) with Chrome, Play Books, Storytel, Keep, Play Store, Settings. The clock widget was removed (time and date are in the status bar). Original backed up as `~/boox-backups/launcher_6_by_5.orig.db`.
+- Launcher "Double tap to sleep" (Home settings) is off. Like the status-bar gesture, slow e-ink taps would trigger it.

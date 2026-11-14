@@ -14,3 +14,8 @@ def test_find_by_content_desc():
 
 def test_missing_text_returns_none():
     assert find_center(XML, "Continue") is None
+
+
+def test_find_text_with_xml_entity():
+    xml = '<hierarchy><node text="Wallpaper &amp; style" bounds="[0,0][100,40]" /></hierarchy>'
+    assert find_center(xml, "Wallpaper & style") == (50, 20)
