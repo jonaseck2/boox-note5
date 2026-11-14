@@ -13,12 +13,13 @@ settings put secure font_weight_adjustment 300              # Bold text: thin Ma
 settings put secure high_text_contrast_enabled 0            # its white text halos show as grey patches
 settings put global stay_on_while_plugged_in 7
 settings put secure contrast_level 1.0                      # Color contrast: High (system palette)
-settings put secure theme_customization_overlay_packages \'{"android.theme.customization.color_source":"preset","android.theme.customization.theme_style":"MONOCHROMATIC","android.theme.customization.system_palette":"FF808080","android.theme.customization.accent_color":"FF808080","android.theme.customization.color_both":"1"}\'
-                                                            # monochrome palette: accents become greys
+
 content insert --uri content://lineagesettings/system --bind name:s:double_tap_sleep_gesture --bind value:s:0
                                                             # slow e-ink taps on the status bar slept the display
 echo done
 '
+# Monochrome palette: theme accents (e.g. the launcher clock) become greys. Own call because of the JSON quoting.
+adb -s "$S" shell "settings put secure theme_customization_overlay_packages '{\"android.theme.customization.color_source\":\"preset\",\"android.theme.customization.theme_style\":\"MONOCHROMATIC\",\"android.theme.customization.system_palette\":\"FF808080\",\"android.theme.customization.accent_color\":\"FF808080\",\"android.theme.customization.color_both\":\"1\"}'"
 # Plain white wallpaper (owner: the grey default was hard to read and ghosted). No API for this from
 # adb: write the image files as root, drop the stale colour hints, reboot to apply.
 if [ "${WALLPAPER:-0}" = 1 ]; then
