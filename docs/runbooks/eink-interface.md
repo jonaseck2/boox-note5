@@ -230,3 +230,17 @@ done
 - Launcher "Double tap to sleep" (Home settings) is off. Like the status-bar gesture, slow e-ink taps would trigger it.
 - **Default wallpaper: The Great Wave (Hokusai, public domain) as a light print** (owner, 2026-11-14). `booxctl wallpaper [wave|white]` downloads the Wikimedia original (sha256 pinned), cover-crops it to 1872x1404 and keeps 45% of the ink, then installs it as root and reboots. The full-contrast version made Android choose **white** launcher labels and status-bar icons, which were unreadable on the panel. The light print gets dark ones (camera-verified).
 - **Dark mode is not suitable** (camera, 2026-11-14): the previous screen ghosts clearly behind dark Settings and quick-settings backgrounds, because wf4 partial updates don't fully drive large dark areas. Chrome's dark UI comes out mid-grey. Light mode stays the default (`eink-settings.sh`: `cmd uimode night no`).
+
+### Visual-style audit (2026-11-14, `booxctl audit <dir>`)
+
+- Method: `audit.simulate` replicates the shim's tone pass in NumPy (luma, 32 px photo/text tiles, both curves, 1 px bold), so it predicts the panel image without camera noise. `audit.score` gives each uiautomator text or icon node a contrast: paper = the box's dominant grey, ink = 10th percentile of the pixels that differ from paper by more than 12. Verdicts: `vanishes` (< 40), `low` (< 100, or both tones on the same side of mid-grey), `ok`. Covers 24 screens (system UI, Settings, Chrome, Books, Keep, Store, Calendar, Files, Contacts, keyboard, Storytel).
+- Result: 587 elements, **39 flagged (6.6%)**. Groups:
+  1. Translucent backgrounds: app drawer and notification shade/QS sit on a mid-grey layer (about 200) over the wallpaper. Labels and inactive tiles end up grey on grey (e.g. QS tiles 140 on 212).
+  2. Material's light greys on white: expand chevrons (223/255), "Clear all" (158), inactive-tile icons.
+  3. Deliberately faint states: disabled Chrome back/forward, Calendar weekend letters, Settings footnotes.
+  4. App content: a Play Books banner (57 on 87).
+- **Rejected, with reasons:**
+  - **Local contrast amplification** (paper − k·(paper − v) per text tile): flags 39 → 23 at k = 3, but blocky tile seams appear around rounded QS tiles and icons (each tile picks its own paper). It games the metric and looks worse.
+  - **Stronger global curve** (black 100 / white 240): flags 39 → 31, but icon seams appear where photo and text curves diverge more, and the text gain is small. The curve stays at 40/235.
+- Conclusion: the remaining issues have to be fixed where Android draws them (opaque drawer and shade backgrounds through resource overlays), not in the tone curve.
+- Scoring caveat found while building the tool: a 5th-percentile ink misses short text in full-width label boxes (2% coverage). Hence the foreground-pixel method (`test_short_text_in_wide_box_is_found`).

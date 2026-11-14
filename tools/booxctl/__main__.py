@@ -53,8 +53,14 @@ def main(argv=None):
     pu.add_argument("--repo", default="jonaseck2/boox-note5")
     pw = sub.add_parser("wallpaper", help="install an e-ink wallpaper (default: The Great Wave, light print); reboots")
     pw.add_argument("which", nargs="?", default="wave", choices=["wave", "white"])
+    pa = sub.add_parser("audit", help="visual-style audit: predicted panel contrast of every element on ~24 screens")
+    pa.add_argument("dir", type=Path)
     a = ap.parse_args(argv)
     dev = None if a.cmd == "release" else Device(Runner())   # release needs no tablet (CI)
+    if a.cmd == "audit":
+        from . import audit
+        audit.run(dev, a.dir)
+        return 0
     if a.cmd == "wallpaper":
         import tempfile
         from . import wallpaper
