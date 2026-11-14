@@ -1,10 +1,23 @@
 #!/bin/sh
-# Build libbooxepdc.so. Needs Homebrew llvm + lld, and sysroot/ with the device's
-# libdrm, liblog, libdl, libc (adb pull from /vendor/lib64 and /system/lib64).
+# Build libbooxepdc.so. Links against sysroot/ (the device's libdrm, liblog, libdl, libc, pulled with
+# adb from /vendor/lib64 and /system/lib64; gitignored) when present, else against stub libraries
+# generated from stubs/symbols.txt (CI, fresh clones). Both give the same imports: see the runbook.
 set -eu
 cd "$(dirname "$0")"
-"$(brew --prefix llvm)/bin/clang" --target=aarch64-linux-android30 -O2 -fPIC \
+if command -v brew >/dev/null 2>&1 && [ -x "$(brew --prefix llvm 2>/dev/null)/bin/clang" ]; then
+  CLANG=${CLANG:-$(brew --prefix llvm)/bin/clang}
+  LLD=${LLD:-$(brew --prefix lld)/bin/ld.lld}
+fi
+CLANG=${CLANG:-clang}
+LLD=${LLD:-ld.lld}
+export CLANG LLD
+SYSROOT=${SYSROOT:-sysroot}
+if [ ! -f "$SYSROOT/libc.so" ]; then
+  SYSROOT=build/stubs
+  stubs/mkstubs.sh "$PWD/$SYSROOT" >/dev/null
+fi
+"$CLANG" --target=aarch64-linux-android30 -O2 -fPIC \
   -fno-stack-protector -ffreestanding -nostdlib -mno-outline-atomics \
-  -fuse-ld="$(brew --prefix lld)/bin/ld.lld" -shared -Wl,-soname,libbooxepdc.so \
-  -o libbooxepdc.so epdcshim.c sysroot/libdrm.so sysroot/liblog.so sysroot/libdl.so sysroot/libc.so
-echo built libbooxepdc.so
+  -fuse-ld="$LLD" -shared -Wl,--no-undefined -Wl,-soname,libbooxepdc.so \
+  -o libbooxepdc.so epdcshim.c "$SYSROOT/libdrm.so" "$SYSROOT/liblog.so" "$SYSROOT/libdl.so" "$SYSROOT/libc.so"
+echo "built libbooxepdc.so (sysroot: $SYSROOT)"

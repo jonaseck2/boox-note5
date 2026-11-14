@@ -1,0 +1,26 @@
+# lib symbol version — the shim's imports, generated from the device libraries' export tables (names only).
+# Regenerate after adding an import: see stubs/mkstubs.sh. A missing entry fails the stub link.
+liblog __android_log_print LIBLOG
+libc __system_property_get LIBC
+libc atoi LIBC
+libc clock_gettime LIBC
+libc close LIBC
+libdl dlsym LIBC
+libdrm drmModeAtomicAddProperty -
+libdrm drmModeGetPlaneResources -
+libdrm drmModeGetProperty -
+libdrm drmModeObjectGetProperties -
+libdrm drmPrimeHandleToFD -
+libc free LIBC
+libc getauxval LIBC
+libc ioctl LIBC
+libc malloc LIBC
+libc memcmp LIBC
+libc memcpy LIBC
+libc memset LIBC
+libc mmap LIBC
+libc munmap LIBC
+libc poll LIBC
+libc pthread_create LIBC
+libc strcmp LIBC
+libc usleep LIBC
