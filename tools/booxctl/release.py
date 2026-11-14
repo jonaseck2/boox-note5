@@ -62,3 +62,49 @@ def build_glue_bundle(repo_root: Path, out_dir: Path, version: str) -> Path:
     digest = hashlib.sha256(out.read_bytes()).hexdigest()
     out.with_name(out.name + ".sha256").write_text(f"{digest}  {out.name}\n")
     return out
+
+
+_GLUE_VERSION = re.compile(r"^(\d{4})\.(\d{2})\.(\d{2})\.(\d{1,2})$")
+
+
+def version_code(version: str) -> int:
+    """`YYYY.MM.DD.N` -> YYYYMMDD*100 + N (Magisk versionCode; owner decision 2026-11-14)."""
+    m = _GLUE_VERSION.match(version or "")
+    if not m:
+        raise ValueError(f"version must be YYYY.MM.DD.N (N <= 99): {version!r}")
+    y, mo, d, n = map(int, m.groups())
+    if not (2020 <= y <= 2099 and 1 <= mo <= 12 and 1 <= d <= 31):
+        raise ValueError(f"not a date: {version!r}")
+    return (y * 10000 + mo * 100 + d) * 100 + n
+
+
+def verify_bundle(zip_path: Path, out_dir: Path) -> dict:
+    """Check the .sha256 sidecar and every manifest hash, extract into out_dir, return the manifest.
+    Raises ValueError naming the first bad file; nothing usable is left in out_dir on failure."""
+    zip_path, out_dir = Path(zip_path), Path(out_dir)
+    side = zip_path.with_name(zip_path.name + ".sha256")
+    if side.exists():
+        want = side.read_text().split()[0]
+        if hashlib.sha256(zip_path.read_bytes()).hexdigest() != want:
+            raise ValueError(f"sha256 of {zip_path.name} does not match its sidecar")
+    with zipfile.ZipFile(zip_path) as zf:
+        manifest = json.loads(zf.read("manifest.json"))
+        if manifest.get("format") != MANIFEST_FORMAT or manifest.get("kind") != "glue":
+            raise ValueError("not a format-1 glue bundle")
+        names = set(zf.namelist()) - {"manifest.json"}
+        if names != set(manifest["files"]):
+            raise ValueError(f"bundle files differ from manifest: {sorted(names ^ set(manifest['files']))}")
+        bodies = {}
+        for name, meta in manifest["files"].items():
+            if name.startswith("/") or ".." in Path(name).parts:
+                raise ValueError(f"unsafe path in bundle: {name}")
+            body = zf.read(name)
+            if hashlib.sha256(body).hexdigest() != meta["sha256"] or len(body) != meta["size"]:
+                raise ValueError(f"hash mismatch: {name}")
+            bodies[name] = body
+    for name, body in bodies.items():
+        dst = out_dir / name
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(body)
+        dst.chmod(0o755 if name.endswith(".sh") else 0o644)
+    return manifest

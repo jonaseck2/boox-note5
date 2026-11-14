@@ -108,3 +108,47 @@ def test_builds_from_the_real_repo(tmp_path):
         m = json.loads(zf.read("manifest.json"))
     so = (REPO / "device/epdcshim/libbooxepdc.so").read_bytes()
     assert m["files"]["libbooxepdc.so"]["sha256"] == _sha(so)
+
+
+def test_version_code():
+    assert release.version_code("2026.11.14.1") == 2026111401
+    assert release.version_code("2026.01.02.99") == 2026010299
+    for bad in ("2026.11.14", "1.2.3.4", "2026.13.01.1", "2026.11.14.100"):
+        with pytest.raises(ValueError):
+            release.version_code(bad)
+
+
+def _built(tmp_path):
+    return release.build_glue_bundle(_fake_repo(tmp_path / "repo"), tmp_path / "out", "2026.11.14.1")
+
+
+def test_verify_bundle_ok(tmp_path):
+    z = _built(tmp_path)
+    m = release.verify_bundle(z, tmp_path / "x")
+    assert m["version"] == "2026.11.14.1"
+    assert (tmp_path / "x" / "libbooxepdc.so").is_file()
+    assert os.access(tmp_path / "x" / "module" / "service.sh", os.X_OK)
+
+
+def test_verify_bundle_rejects_tampered_file(tmp_path):
+    z = _built(tmp_path)
+    # rebuild the zip with one changed byte in the shim but the original manifest, and a matching sidecar
+    src = zipfile.ZipFile(z)
+    bad = tmp_path / "bad.zip"
+    with zipfile.ZipFile(bad, "w") as zf:
+        for i in src.infolist():
+            body = src.read(i.filename)
+            if i.filename == "libbooxepdc.so":
+                body = body[:-1] + bytes([body[-1] ^ 1])
+            zf.writestr(i, body)
+    (tmp_path / "bad.zip.sha256").write_text(f"{_sha(bad.read_bytes())}  bad.zip\n")
+    with pytest.raises(ValueError, match="libbooxepdc.so"):
+        release.verify_bundle(bad, tmp_path / "x")
+
+
+def test_verify_bundle_rejects_bad_sidecar(tmp_path):
+    z = _built(tmp_path)
+    side = z.with_name(z.name + ".sha256")
+    side.write_text("0" * 64 + f"  {z.name}\n")
+    with pytest.raises(ValueError, match="sha256"):
+        release.verify_bundle(z, tmp_path / "x")

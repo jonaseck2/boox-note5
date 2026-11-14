@@ -40,8 +40,27 @@ def main(argv=None):
     pf.add_argument("--seconds", type=float, default=7.0)
     pt = sub.add_parser("tap", help="tap the on-screen element with this text or content-desc")
     pt.add_argument("text")
+    pr = sub.add_parser("release", help="build (and publish) a glue release bundle")
+    pr.add_argument("kind", choices=["glue"])
+    pr.add_argument("--version", required=True, help="YYYY.MM.DD.N")
+    pr.add_argument("--publish", action="store_true", help="create GitHub Release glue-v<version>")
+    pr.add_argument("--repo", default="jonaseck2/boox-note5")
     a = ap.parse_args(argv)
     dev = Device(Runner())
+    if a.cmd == "release":
+        import subprocess
+        from . import release
+        release.version_code(a.version)
+        root = Path(__file__).resolve().parents[2]
+        z = release.build_glue_bundle(root, root / "dist", a.version)
+        print(z)
+        if a.publish:
+            tag = f"glue-v{a.version}"
+            subprocess.run(["gh", "release", "create", tag, "-R", a.repo, "--title", f"Glue {a.version}",
+                            "--notes", "E-ink glue bundle (display shim, Magisk module scripts, e-ink settings). "
+                            "Install from the Mac: `booxctl update glue --tag " + tag + "`.",
+                            str(z), str(z) + ".sha256"], check=True)
+        return 0
     if a.cmd == "tap":
         from . import ui
         ok = ui.tap_text(dev, a.text)
