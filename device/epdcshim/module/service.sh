@@ -16,9 +16,13 @@ settings put global window_animation_scale 0
 settings put global transition_animation_scale 0
 settings put global animator_duration_scale 0
 
-# 3) Android brightness slider -> front light. Lowest slider position = light off.
+# 3) Android brightness slider -> front light (lowest position = off), and Night Light -> warm front
+#    light: onyx_bl_ct 0 = cold .. 24 = warm (camera: R/B 1.037 -> 1.174). Night Light's temperature
+#    (2596..4082 K, lower = warmer) maps linearly onto 24..0; Night Light off = 0.
+CT=/sys/class/backlight/onyx_bl_ct/brightness
 max=$(cat /sys/class/backlight/onyx_bl_br/max_brightness 2>/dev/null || echo 28)
-last=
+ctmax=$(cat /sys/class/backlight/onyx_bl_ct/max_brightness 2>/dev/null || echo 24)
+last=; lastct=
 while true; do
   b=$(settings get system screen_brightness 2>/dev/null)
   case "$b" in ''|*[!0-9]*) b=1 ;; esac
@@ -28,5 +32,15 @@ while true; do
     echo "$v" > "$BR"
     last=$b
   fi
-  sleep 1
+  on=$(settings get secure night_display_activated 2>/dev/null)
+  ct=0
+  if [ "$on" = 1 ]; then
+    k=$(settings get secure night_display_color_temperature 2>/dev/null)
+    case "$k" in ''|*[!0-9]*) k=2850 ;; esac
+    ct=$(( (4082 - k) * ctmax / (4082 - 2596) ))
+    [ "$ct" -lt 0 ] && ct=0
+    [ "$ct" -gt "$ctmax" ] && ct=$ctmax
+  fi
+  if [ "$ct" != "$lastct" ]; then echo "$ct" > "$CT"; lastct=$ct; fi
+  sleep 2
 done
