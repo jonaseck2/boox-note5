@@ -145,7 +145,7 @@ static int build_lut(void) {                              // returns 1 when the 
     int pb = prop_int("persist.boox.lut.pblack", 16), pw = prop_int("persist.boox.lut.pwhite", 245);
     int key = ((bl * 256 + wh) * 256 + pb) * 256 + pw;
     int adaptive = prop_int("persist.boox.lut.adaptive", 1), pct = prop_int("persist.boox.lut.photo_pct", 35);
-    key = key * 31 + adaptive * 1000 + pct;
+    key = key * 31 + adaptive * 1000 + pct + prop_int("persist.boox.lut.bold", 1) * 7;
     if (key == g_lut_key) return 0;
     g_lut_key = key;
     fill_lut(g_lut, bl, wh);
@@ -189,6 +189,7 @@ static int process_frame(struct fbent *e, int tone, int *rx, int *ry, int *rr, i
     static u32 band[B][1920];
     static unsigned char st[B], photo[1920 / B + 1];
     int adaptive = prop_int("persist.boox.lut.adaptive", 1), pct = prop_int("persist.boox.lut.photo_pct", 35);
+    int bold = prop_int("persist.boox.lut.bold", 1);
     u32 ntiles = (w + B - 1) / B;
     for (u32 yb = 0; yb < e->h; yb += B) {
         u32 nb = e->h - yb < B ? e->h - yb : B;
@@ -229,8 +230,17 @@ static int process_frame(struct fbent *e, int tone, int *rx, int *ry, int *rr, i
             // Invalidate it, or the next fresh frame (raw == pr) would get this stale mapping written back.
             if (st[r] == 3) memset(pr, 0, w * 4);
             if (st[r] == 2 && tone) {
+                // Embolden text/UI tiles: the darker of a pixel and its left neighbour, so 1-2 px web and
+                // Material strokes grow by 1 px (Chrome ignores Android's Bold text setting). Photos untouched.
+                u32 prev = 255;
                 for (u32 x = 0; x < w; x++) {
-                    u32 v = (photo[x / B] ? g_lutp : g_lut)[luma(pr[x])];
+                    u32 v;
+                    if (photo[x / B]) { v = g_lutp[luma(pr[x])]; prev = 255; }
+                    else {
+                        u32 c = g_lut[luma(pr[x])];
+                        v = bold && prev < c ? prev : c;
+                        prev = c;
+                    }
                     tmp[x] = 0xFE000000u | v << 16 | v << 8 | v;
                 }
                 memcpy(row, tmp, w * 4);
