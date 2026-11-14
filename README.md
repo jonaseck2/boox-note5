@@ -18,9 +18,10 @@ whole loop over adb and Qualcomm EDL. A camera facing the panel scores what a pe
   - A boot guard restores the previous shim after 3 unhealthy boots.
 - Settings → Display → **E-ink** (`device/einksettings`) sets contrast, waveform and the ghosting
   clean, and triggers a full refresh.
-- The brightness slider drives the front light.
+- The brightness slider drives the front light, and Night Light warms it.
 - Updates: `booxctl update glue --tag glue-v<version>` installs a verified glue release from this repo's
-  GitHub Releases, then reboots and runs a post-check. System updates go over USB/EDL
+  GitHub Releases, then reboots and runs a post-check. On the tablet itself: Settings → Display → E-ink →
+  Check for updates. System updates go over USB/EDL
   ([design](docs/plans/2026-11-14-ota-design.md)).
 
 Details: [`docs/runbooks/eink-interface.md`](docs/runbooks/eink-interface.md),

@@ -14,13 +14,11 @@ _Actively building. Link the active plan._
 
 _Decided, not started. A spec may exist; the plan doesn't yet._
 
-- On-device glue updates (Magisk module zip + `updateJson` on the public releases) — design: [OTA](plans/2026-11-14-ota-design.md)
 
 ## Later
 
 _Ideas worth keeping, not yet committed to._
 
-- Night Light → front-light colour temperature (`onyx_bl_ct`)
 - Virtual A/B for on-device system updates (research, see the OTA design)
 
 ---

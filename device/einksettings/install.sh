@@ -44,4 +44,10 @@ chcon -R u:object_r:system_file:s0 \$M/system
 rm -f \$M/disable \$M/remove
 ls -lZR \$M/system
 "'
-echo "staged. Reboot, then run: $0 grant"
+# PackageManager rescans /system APKs only when the build fingerprint changes, so a replaced APK keeps
+# its old package record (version, permissions) until then. Installing the same, identically signed APK
+# as an update of the system package applies it now and keeps the SYSTEM flag (the Settings tile stays).
+if $A shell pm path org.boox.einksettings >/dev/null 2>&1; then
+  $A install -r "$APK" | tail -1
+fi
+echo "staged. First install only: reboot, then run: $0 grant"
