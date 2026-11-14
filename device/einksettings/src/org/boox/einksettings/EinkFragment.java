@@ -69,7 +69,7 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
     private Preference status;
     private SwitchPreference lutEnable;
     private ListPreference black, white, clean, waveform;
-    private Preference refresh, reset;
+    private Preference refresh, reset, update;
 
     @Override
     public void onCreate(Bundle state) {
@@ -126,6 +126,16 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
         });
         add(refreshCat, reset);
 
+        PreferenceCategory upd = category(s, "Updates");
+        update = new Preference(a);
+        update.setTitle("Check for updates");
+        update.setSummary("Display shim and module from github.com/jonaseck2/boox-note5 releases");
+        update.setOnPreferenceClickListener(p -> {
+            checkUpdate();
+            return true;
+        });
+        add(upd, update);
+
         setControlsEnabled(false);
         load();
     }
@@ -165,7 +175,7 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
     }
 
     private void setControlsEnabled(boolean on) {
-        for (Preference p : new Preference[]{lutEnable, black, white, clean, waveform, refresh, reset}) {
+        for (Preference p : new Preference[]{lutEnable, black, white, clean, waveform, refresh, reset, update}) {
             p.setEnabled(on);
         }
     }
@@ -310,6 +320,43 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
                 current.putAll(w);
                 show();
                 if (done != null) toast(done);
+            });
+        });
+    }
+
+    private void checkUpdate() {
+        update.setEnabled(false);
+        update.setSummary("Checking…");
+        io.execute(() -> {
+            String msg;
+            boolean restart = false;
+            try {
+                long have = Updater.installedCode();
+                Updater.Release rel = Updater.latest();
+                if (rel == null) {
+                    msg = "No glue release found";
+                } else if (Updater.code(rel.version) <= have) {
+                    msg = "Up to date (" + rel.version + ")";
+                } else {
+                    msg = Updater.install(rel, getActivity().getCacheDir());
+                    restart = true;
+                }
+            } catch (Exception e) {
+                msg = "Update failed: " + e.getMessage();
+            }
+            final String m = msg;
+            final boolean r = restart;
+            ui(() -> {
+                update.setEnabled(true);
+                update.setSummary(m);
+                if (r) {
+                    new android.app.AlertDialog.Builder(getActivity())
+                            .setTitle("Restart now?")
+                            .setMessage(m + " The display shim loads at boot.")
+                            .setPositiveButton("Restart", (d, w) -> runRoot("svc power reboot || reboot", "Restarting"))
+                            .setNegativeButton("Later", null)
+                            .show();
+                }
             });
         });
     }
