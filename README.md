@@ -19,8 +19,9 @@ whole loop over adb and Qualcomm EDL. A camera facing the panel scores what a pe
 - Settings → Display → **E-ink** (`device/einksettings`) sets contrast, waveform and the ghosting
   clean, and triggers a full refresh.
 - The brightness slider drives the front light.
-- Updates: [design](docs/plans/2026-11-14-ota-design.md). Glue updates from GitHub Releases, system
-  updates over USB/EDL.
+- Updates: `booxctl update glue --tag glue-v<version>` installs a verified glue release from this repo's
+  GitHub Releases, then reboots and runs a post-check. System updates go over USB/EDL
+  ([design](docs/plans/2026-11-14-ota-design.md)).
 
 Details: [`docs/runbooks/eink-interface.md`](docs/runbooks/eink-interface.md),
 [`docs/runbooks/gsi-install.md`](docs/runbooks/gsi-install.md). Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md).
