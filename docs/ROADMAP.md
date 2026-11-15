@@ -19,6 +19,7 @@ _Decided, not started. A spec may exist; the plan doesn't yet._
 
 _Ideas worth keeping, not yet committed to._
 
+- Opaque app-drawer panel: Launcher3 draws it `#C6C6C6` and no resource overlay reaches it (8 tokens tried, see the runbook). Options: a launcher with an opaque drawer, or a code patch.
 - Virtual A/B for on-device system updates (research, see the OTA design)
 
 ---
