@@ -19,25 +19,43 @@ def _lut(black: int, white: int) -> np.ndarray:
     return np.clip((i - black) * 255 // (white - black), 0, 255).astype(np.uint8)
 
 
+def dark_frame(luma: np.ndarray, p: dict, was_dark: bool = False) -> bool:
+    """Shim's dark-page detector: share of luma < 64 on a 4 px grid. Enters the dark profile above
+    dark_frac %, leaves it below dark_frac - 10 % (hysteresis; the audit passes was_dark=False)."""
+    if not p.get("auto_dark", 1):
+        return False
+    s = luma[::4, ::4]
+    pct = np.count_nonzero(s < 64) * 100 / max(s.size, 1)
+    return pct > p.get("dark_frac", 60) - (10 if was_dark else 0)
+
+
 def simulate(img_bgr: np.ndarray, p: dict) -> np.ndarray:
-    """Predicted panel grey (uint8 HxW) for a BGR screencap, using the shim's lut.* props `p`."""
+    """Predicted panel grey (uint8 HxW) for a BGR screencap, using the shim's lut.* props `p`.
+    A mostly dark frame gets the dark profile: its own text curve, a higher photo threshold (Material
+    dark surfaces sit at luma 30-70) and a bold pass that widens light strokes instead of dark ones."""
     r, g, b = (img_bgr[..., 2].astype(np.int32), img_bgr[..., 1].astype(np.int32), img_bgr[..., 0].astype(np.int32))
     luma = ((54 * r + 183 * g + 19 * b) >> 8).astype(np.uint8)
     h, w = luma.shape
+    dark = dark_frame(luma, p)
+    lo = p.get("dark_photo_lo", 72) if dark else 48
     photo = np.zeros((h, w), bool)
     if p.get("adaptive", 1):
         for y0 in range(0, h, B):
             band = luma[y0:y0 + B:2]
             for x0 in range(0, w, B):
                 t = band[:, x0:x0 + B:2]
-                if t.size and (np.count_nonzero((t >= 48) & (t <= 208)) * 100 > p.get("pct", 35) * t.size):
+                if t.size and (np.count_nonzero((t >= lo) & (t <= 208)) * 100 > p.get("pct", 35) * t.size):
                     photo[y0:y0 + B, x0:x0 + B] = True
-    text = _lut(p.get("black", 40), p.get("white", 235))[luma]
+    if dark:
+        text = _lut(p.get("dark_black", 20), p.get("dark_white", 180))[luma]
+    else:
+        text = _lut(p.get("black", 40), p.get("white", 235))[luma]
     out = np.where(photo, _lut(p.get("pblack", 16), p.get("pwhite", 245))[luma], text)
     if p.get("bold", 1):
-        prev = np.full_like(text, 255)
-        prev[:, 1:] = np.where(photo[:, :-1], 255, text[:, :-1])
-        out = np.where(photo, out, np.minimum(text, prev))
+        edge = 0 if dark else 255                       # neutral value after a photo pixel / row start
+        prev = np.full_like(text, edge)
+        prev[:, 1:] = np.where(photo[:, :-1], edge, text[:, :-1])
+        out = np.where(photo, out, np.maximum(text, prev) if dark else np.minimum(text, prev))
     return out.astype(np.uint8)
 
 
@@ -111,7 +129,8 @@ SCREENS = [
 
 
 def props(dev) -> dict:
-    keys = {"black": 40, "white": 235, "pblack": 16, "pwhite": 245, "photo_pct": 35, "adaptive": 1, "bold": 1}
+    keys = {"black": 40, "white": 235, "pblack": 16, "pwhite": 245, "photo_pct": 35, "adaptive": 1, "bold": 1,
+            "auto_dark": 1, "dark_black": 20, "dark_white": 180, "dark_frac": 60, "dark_photo_lo": 72}
     out = {}
     for k, d in keys.items():
         v = dev.getprop(f"persist.boox.lut.{k}")

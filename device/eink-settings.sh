@@ -5,7 +5,7 @@ set -eu
 S=${1:-${BOOX_SERIAL:-$(head -n1 ~/.config/boox/serial 2>/dev/null)}}; [ -n "$S" ] || { echo "set BOOX_SERIAL or write the serial to ~/.config/boox/serial" >&2; exit 1; }
 export ADB_LIBUSB=1
 adb -s "$S" shell '
-cmd uimode night no                                         # light theme: dark UI is low-contrast on e-ink
+[ "$(settings get secure ui_night_mode)" = 2 ] || cmd uimode night no   # light by default; keep a chosen dark theme (the shim has a dark profile)
 settings put global window_animation_scale 0                # animation frames leave ghost traces
 settings put global transition_animation_scale 0
 settings put global animator_duration_scale 0

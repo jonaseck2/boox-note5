@@ -140,12 +140,16 @@ static void fill_lut(unsigned char *lut, int bl, int wh) {
     }
 }
 
+static int g_dark;                                       // 1 = dark-page profile (see dark_frame)
+static volatile int g_flip;                              // profile changed: clean once at the next idle
+
 static int build_lut(void) {                              // returns 1 when the curves changed
     int bl = prop_int("persist.boox.lut.black", 40), wh = prop_int("persist.boox.lut.white", 235);
+    if (g_dark) { bl = prop_int("persist.boox.lut.dark_black", 20); wh = prop_int("persist.boox.lut.dark_white", 180); }
     int pb = prop_int("persist.boox.lut.pblack", 16), pw = prop_int("persist.boox.lut.pwhite", 245);
     int key = ((bl * 256 + wh) * 256 + pb) * 256 + pw;
     int adaptive = prop_int("persist.boox.lut.adaptive", 1), pct = prop_int("persist.boox.lut.photo_pct", 35);
-    key = key * 31 + adaptive * 1000 + pct + prop_int("persist.boox.lut.bold", 1) * 7;
+    key = key * 31 + adaptive * 1000 + pct + prop_int("persist.boox.lut.bold", 1) * 7 + g_dark * 100000;
     if (key == g_lut_key) return 0;
     g_lut_key = key;
     fill_lut(g_lut, bl, wh);
@@ -154,6 +158,20 @@ static int build_lut(void) {                              // returns 1 when the 
 }
 
 static inline u32 luma(u32 p) { return (54 * (p & 255) + 183 * ((p >> 8) & 255) + 19 * ((p >> 16) & 255)) >> 8; }
+
+/* Dark-page detector (mirrored by tools/booxctl/audit.py dark_frame): share of luma < 64 on a 4 px grid.
+ * Material dark surfaces sit at luma 30-70, which the light curve (black point 40) crushes to one black and
+ * the photo test (48..208) splits into 32 px blocks. Enter above dark_frac %, leave 10 % lower. */
+static int dark_frame(const unsigned char *map, u32 pitch, u32 w, u32 h) {
+    if (!prop_int("persist.boox.lut.auto_dark", 1)) return 0;
+    u32 n = 0, d = 0;
+    for (u32 y = 0; y < h; y += 4) {
+        const u32 *row = (const u32 *)(map + (unsigned long)y * pitch);
+        for (u32 x = 0; x < w; x += 4) { n++; d += luma(row[x]) < 64; }
+    }
+    int frac = prop_int("persist.boox.lut.dark_frac", 60) - (g_dark ? 10 : 0);
+    return n && d * 100 > (u32)frac * n;
+}
 
 static int process_frame(struct fbent *e, int tone, int *rx, int *ry, int *rr, int *rb) {
     unsigned long sz = (unsigned long)e->pitch * e->h;
@@ -173,12 +191,16 @@ static int process_frame(struct fbent *e, int tone, int *rx, int *ry, int *rr, i
         if (!g_prev || !g_raw) { free(g_prev); free(g_raw); g_prev = g_raw = 0; return -1; }
         first = 1;
     }
-    if (tone && build_lut() && g_raw) memset(g_raw, 0, (unsigned long)rowb * e->h);   // re-map everything
     struct timespec q0, q1, q2, q3;
     clock_gettime(1, &q0);
     u64 sync = 3 /*READ|WRITE, START*/;
     ioctl(e->dfd, DMA_BUF_IOCTL_SYNC, &sync);
     clock_gettime(1, &q1);
+    if (tone) {
+        int d = dark_frame(e->map, e->pitch, w, e->h);
+        if (d != g_dark) { g_dark = d; g_flip = 1; __android_log_print(4, TAG, "profile %s", d ? "dark" : "light"); }
+        if (build_lut() && g_raw) memset(g_raw, 0, (unsigned long)rowb * e->h);   // re-map everything
+    }
     int x0 = (int)w, x1 = -1, y0 = (int)e->h, y1 = -1;
     /* Content-adaptive tone mapping in bands of B rows / tiles of B px. A tile whose raw pixels are
      * more than photo_pct % mid-grey (luma 48..208) is a photo and gets the gentle curve; text/UI
@@ -190,6 +212,7 @@ static int process_frame(struct fbent *e, int tone, int *rx, int *ry, int *rr, i
     static unsigned char st[B], photo[1920 / B + 1];
     int adaptive = prop_int("persist.boox.lut.adaptive", 1), pct = prop_int("persist.boox.lut.photo_pct", 35);
     int bold = prop_int("persist.boox.lut.bold", 1);
+    u32 plo = g_dark ? (u32)prop_int("persist.boox.lut.dark_photo_lo", 72) : 48;
     u32 ntiles = (w + B - 1) / B;
     for (u32 yb = 0; yb < e->h; yb += B) {
         u32 nb = e->h - yb < B ? e->h - yb : B;
@@ -212,7 +235,7 @@ static int process_frame(struct fbent *e, int tone, int *rx, int *ry, int *rr, i
                     u32 xs = t * B, xe = xs + B < w ? xs + B : w, n = 0, mid = 0;
                     for (u32 r = 0; r < nb; r += 2) {
                         const u32 *pr = (const u32 *)(g_raw + (unsigned long)(yb + r) * rowb);
-                        for (u32 x = xs; x < xe; x += 2) { u32 l = luma(pr[x]); n++; mid += l >= 48 && l <= 208; }
+                        for (u32 x = xs; x < xe; x += 2) { u32 l = luma(pr[x]); n++; mid += l >= plo && l <= 208; }
                     }
                     photo[t] = n && mid * 100 > (u32)pct * n;
                 }
@@ -232,13 +255,14 @@ static int process_frame(struct fbent *e, int tone, int *rx, int *ry, int *rr, i
             if (st[r] == 2 && tone) {
                 // Embolden text/UI tiles: the darker of a pixel and its left neighbour, so 1-2 px web and
                 // Material strokes grow by 1 px (Chrome ignores Android's Bold text setting). Photos untouched.
-                u32 prev = 255;
+                // Dark profile: the lighter one, so light text on dark surfaces grows instead of thinning.
+                u32 edge = g_dark ? 0 : 255, prev = edge;
                 for (u32 x = 0; x < w; x++) {
                     u32 v;
-                    if (photo[x / B]) { v = g_lutp[luma(pr[x])]; prev = 255; }
+                    if (photo[x / B]) { v = g_lutp[luma(pr[x])]; prev = edge; }
                     else {
                         u32 c = g_lut[luma(pr[x])];
-                        v = bold && prev < c ? prev : c;
+                        v = bold && (g_dark ? prev > c : prev < c) ? prev : c;
                         prev = c;
                     }
                     tmp[x] = 0xFE000000u | v << 16 | v << 8 | v;
@@ -308,12 +332,18 @@ static void *epdc_thread(void *unused) {
             // idle: after enough fast (non-cleaning) updates, clean their union once with a quality waveform
             idle_us += (u32)prop_int("persist.boox.epdc.period_us", 100000);
             int clean_mode = prop_int("persist.boox.epdc.clean_mode", 16 /* 0x10: full update (partial modes skip unchanged pixels, so they cannot clean) */);
-            int clean_after = prop_int("persist.boox.epdc.clean_after", 30);
-            if (clean_mode && clean_after > 0 && u_n >= clean_after && u_r >= 0 &&   // 0 = off, and never an empty rect
+            // 0x10 (waveform 2) leaves a dark page white on this panel (camera, 2026-11-15). 0x13 (waveform 3,
+            // full) flashes once and ends on the image; 0x11 leaves ghosts; 0x14 does not clean.
+            if (g_dark) clean_mode = prop_int("persist.boox.epdc.dark_clean_mode", 0x13);
+            // Dark pages ghost more: wf4 does not fully drive large dark areas, so clean sooner there,
+            // and once after every light/dark profile change (the whole screen was re-mapped).
+            int clean_after = g_dark ? prop_int("persist.boox.epdc.dark_clean_after", 10)
+                                     : prop_int("persist.boox.epdc.clean_after", 30);
+            if (clean_mode && clean_after > 0 && (u_n >= clean_after || g_flip) && u_r >= 0 &&   // 0 = off, and never an empty rect
                 idle_us >= (u32)prop_int("persist.boox.epdc.clean_idle_ms", 1500) * 1000u && g_safe) {
                 send(u_l, u_t, u_r, u_b, clean_mode);
                 __android_log_print(4, TAG, "clean [%d %d %d %d] after %d updates", u_l, u_t, u_r, u_b, u_n);
-                u_l = u_t = 1 << 30; u_r = u_b = -1; u_n = 0;
+                u_l = u_t = 1 << 30; u_r = u_b = -1; u_n = 0; g_flip = 0;
             }
             continue;
         }

@@ -229,7 +229,21 @@ done
 - Layout via Launcher3's database `/data/data/com.android.launcher3/databases/launcher_6_by_5.db` (table `favorites`): stop the launcher, replace the file (owner `u0_a140`, mode 660, `restorecon`), press HOME. The layout now: search bar, a row with Calendar/Contacts/Gallery/Camera/Music/Files (`cellY` 2), and a dock (`container` -101) with Chrome, Play Books, Storytel, Keep, Play Store, Settings. The clock widget was removed (time and date are in the status bar). Original backed up as `~/boox-backups/launcher_6_by_5.orig.db`.
 - Launcher "Double tap to sleep" (Home settings) is off. Like the status-bar gesture, slow e-ink taps would trigger it.
 - **Default wallpaper: The Great Wave (Hokusai, public domain) as a light print** (owner, 2026-11-14). `booxctl wallpaper [wave|white]` downloads the Wikimedia original (sha256 pinned), cover-crops it to 1872x1404 and keeps 45% of the ink, then installs it as root and reboots. The full-contrast version made Android choose **white** launcher labels and status-bar icons, which were unreadable on the panel. The light print gets dark ones (camera-verified).
-- **Dark mode is not suitable** (camera, 2026-11-14): the previous screen ghosts clearly behind dark Settings and quick-settings backgrounds, because wf4 partial updates don't fully drive large dark areas. Chrome's dark UI comes out mid-grey. Light mode stays the default (`eink-settings.sh`: `cmd uimode night no`).
+- **Dark mode was not suitable** (superseded by the dark profile below) (camera, 2026-11-14): the previous screen ghosts clearly behind dark Settings and quick-settings backgrounds, because wf4 partial updates don't fully drive large dark areas. Chrome's dark UI comes out mid-grey. Light mode stays the default (`eink-settings.sh`: `cmd uimode night no`).
+
+### Dark theme: the shim's dark profile (2026-11-15)
+
+- Cause of the poor dark theme, measured with `booxctl audit` on 24 screens (77 of 595 elements flagged, light mode 32 of 579):
+  1. Material dark surfaces sit at luma 30–70. The light curve (black point 40) maps them all to black, so cards, tiles and icon discs merge.
+  2. The photo test (luma 48–208 over 35 % of a 32 px tile) classifies those surfaces as photo tiles. The two curves then split one surface into visible 32 px blocks.
+  3. The bold pass keeps the darker neighbour, so it thins light text on dark surfaces. A 1 px light stroke disappears entirely (test `test_auto_dark_off_keeps_light_curve`).
+  4. The idle clean `0x10` (waveform 2, full) leaves a dark page **white** on this panel: camera mean 133 → flash 224 → 176 (white), 3 of 5 runs.
+- Fix in `device/epdcshim`: per frame, the shim measures the share of luma < 64 on a 4 px grid. Above `persist.boox.lut.dark_frac` (60 %) it switches to the dark profile and back below 50 %. It logs `profile dark|light`. The dark profile has its own curve, `lut.dark_black` 20 / `lut.dark_white` 180, and photo threshold `lut.dark_photo_lo` 72. Its bold pass keeps the lighter neighbour. It cleans after `epdc.dark_clean_after` (10) updates with `epdc.dark_clean_mode` `0x13`, and once after every profile change. `lut.auto_dark 0` turns the profile off. `audit.simulate` mirrors all of it (`audit.dark_frame`).
+- Clean modes on a dark page (camera, 30 fps, 2026-11-15): `0x10`, `0x20`, `0x40` end white. `0x11` shows no flash and leaves the previous screen's icons. `0x13` flashes once and ends on the image (3 of 3 runs, panel mean 117–134). `0x14` does not clean (the full wallpaper stays as a ghost).
+- Result: dark mode 77 → 42 flagged of 595 (most of the rest are scoring artifacts: back-arrow discs, Chrome's disabled back/forward). Light mode unchanged (33 of 571). Light screens never trip the detector at 60 %.
+- Curve choice from the offline sweep on the dark captures (flagged of 595, with the per-tile polarity bold): 40/235 → 74, 16/235 → 75, 16/200 → 46, 10/190 → 45, **20/180 → 44**, 0/170 → 47.
+- `device/eink-settings.sh` keeps a dark theme the owner chose (`ui_night_mode` 2). Otherwise it sets light.
+- Still open: the dark theme still ghosts more than the light theme between cleans, because wf4 partial updates do not fully drive large dark areas. Dimmed QS tiles (Wallet, Device controls, Battery Saver: 148 on 35) and the notification expand chevrons stay low contrast.
 
 ### Visual-style audit (2026-11-14, `booxctl audit <dir>`)
 

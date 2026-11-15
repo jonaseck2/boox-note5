@@ -43,3 +43,41 @@ def test_short_text_in_wide_box_is_found():
     pred[8:22, 0:115:3] = 0                              # "Brightness": ~1.6% of the box
     s = audit.score(pred, (0, 0, 1132, 31))
     assert s["verdict"] == "ok" and s["contrast"] > 200
+
+
+DARK = dict(P, auto_dark=1, dark_black=20, dark_white=180, dark_frac=60, dark_photo_lo=72)
+
+
+def _dark_page():
+    img = np.full((64, 64, 3), 30, np.uint8)            # Material dark surface
+    img[:, 10] = 180                                     # a 1 px light text stroke
+    return img
+
+
+def test_mostly_dark_frame_uses_dark_curve():
+    pred = audit.simulate(_dark_page(), DARK)
+    assert pred[5, 0] == (30 - 20) * 255 // 160 and pred[5, 10] == 255
+
+
+def test_dark_frame_bold_extends_light_stroke():
+    pred = audit.simulate(_dark_page(), DARK)
+    assert pred[5, 11] == 255 and pred[5, 12] == (30 - 20) * 255 // 160
+
+
+def test_dark_frame_dark_grey_card_is_not_a_photo():
+    img = np.full((64, 64, 3), 30, np.uint8)
+    img[32:, 32:] = 60                                   # surfaceContainer card: mid-grey under the light rule
+    pred = audit.simulate(img, DARK)
+    assert pred[40, 40] == (60 - 20) * 255 // 160        # text curve, not the photo curve
+
+
+def test_auto_dark_off_keeps_light_curve():
+    pred = audit.simulate(_dark_page(), dict(DARK, auto_dark=0))
+    assert pred[5, 0] == 0 and pred[5, 10] == 0          # dark-dilating bold erases the 1 px light stroke
+
+
+def test_light_frame_ignores_dark_profile():
+    img = np.full((64, 64, 3), 240, np.uint8)
+    img[10:12, :, :] = 60
+    pred = audit.simulate(img, DARK)
+    assert pred[0, 0] == 255 and pred[10, 5] == int((60 - 40) * 255 / 195)

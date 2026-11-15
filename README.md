@@ -13,6 +13,7 @@ whole loop over adb and Qualcomm EDL. A camera facing the panel scores what a pe
   - Only changed regions are updated. The default is waveform 4 (camera-measured least flash), with
     an idle clean after 30 updates.
   - A content-adaptive tone curve applies a strong curve to text and UI and a gentle one to photos.
+  - Mostly dark screens (dark theme, dark apps) get a dark profile: their own curve, bold for light text, and a clean refresh that suits dark pages.
   - Two guards prevent kernel panics: commits must carry one full-size framebuffer, and the composer
     is limited to one blend stage.
   - A boot guard restores the previous shim after 3 unhealthy boots.
