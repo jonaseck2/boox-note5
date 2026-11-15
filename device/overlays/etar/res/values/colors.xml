@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="appwidget_no_events">#FF000000</color>
+    <color name="appwidget_date">#FF000000</color>
+</resources>

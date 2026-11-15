@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- E-ink: Etar's calendar widget draws its day headers and "No upcoming events" in white/grey on a
+     transparent body, written for a dark wallpaper. On the light e-ink wallpaper they vanished
+     (booxctl audit 2026-11-15). They become black. Event chips keep white text on the calendar colour. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.boox.eink.overlay.etar">
+    <overlay android:targetPackage="org.lineageos.etar" android:isStatic="true" android:priority="10" />
+    <application android:hasCode="false" />
+</manifest>

@@ -7,7 +7,7 @@ S=${BOOX_SERIAL:-$(head -n1 ~/.config/boox/serial 2>/dev/null)}; [ -n "$S" ] || 
 export ADB_LIBUSB=1
 DIR=${SRC:-build}            # booxctl update glue passes the verified bundle's overlays/ directory
 V=${VERSION:-v1}
-for t in launcher systemui framework; do
+for t in launcher systemui framework etar; do
   f=$DIR/BooxEink-$t.apk
   [ -f "$f" ] || { echo "missing $f" >&2; exit 1; }
   h=$(shasum -a 256 "$f" | cut -d' ' -f1)

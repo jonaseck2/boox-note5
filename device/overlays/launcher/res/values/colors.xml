@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="materialColorSurfaceDim">#FFFFFFFF</color>
+    <!-- Themed (monochrome) icons: black disc, white glyph, so icons stand out on any wallpaper -->
+    <color name="themed_icon_background_color">#FF000000</color>
+    <color name="themed_icon_adaptive_background_color">#FF000000</color>
+    <color name="themed_icon_color">#FFFFFFFF</color>
 </resources>
