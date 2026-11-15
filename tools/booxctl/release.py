@@ -33,6 +33,10 @@ def _glue_sources(repo_root: Path) -> dict:
     apk = repo_root / "device/einksettings/build/EinkSettings.apk"   # optional: needs the Android SDK
     if apk.is_file():
         files["EinkSettings.apk"] = apk
+    ov = repo_root / "device/overlays/build"   # optional: static RROs for the boox_overlays module
+    if ov.is_dir():
+        for p in sorted(ov.glob("BooxEink-*.apk")):
+            files[f"overlays/{p.name}"] = p
     return dict(sorted(files.items()))
 
 

@@ -22,6 +22,8 @@ whole loop over adb and Qualcomm EDL. A camera facing the panel scores what a pe
 - Releases are built by GitHub Actions: Actions → **release** → Run workflow with a version `YYYY.MM.DD.N`.
   The shim links against generated stubs (no device libraries needed), and the APK is signed with the
   key in the repo secret `EINK_KEYSTORE_B64`.
+- Glue releases also carry the e-ink resource overlays. Both update paths install them into the
+  Magisk module `boox_overlays`.
 - Updates: `booxctl update glue --tag glue-v<version>` installs a verified glue release from this repo's
   GitHub Releases, then reboots and runs a post-check. On the tablet itself: Settings → Display → E-ink →
   Check for updates. System updates go over USB/EDL
@@ -51,6 +53,7 @@ python3 -m venv .venv && .venv/bin/pip install -r tools/requirements-dev.txt
 | `tools/booxctl/` | Python CLI: device control, camera, backup, e-ink control, flicker meter, tap by text (`python3 -m booxctl --help` from `tools/`) |
 | `device/epdcshim/` | Composer shim (C), its build and install scripts, and the Magisk module scripts |
 | `device/einksettings/` | The E-ink entry in Android Settings (Java, no Gradle) |
+| `device/overlays/` | Static resource overlays (white notification shade and QS backgrounds), shipped in glue releases into the Magisk module `boox_overlays` |
 | `device/eink-settings.sh` | Android settings for e-ink (theme, animations, bold text, wallpaper) |
 | `device/ebcctl/` | 277-byte AArch64 tool that sets the e-ink refresh mode (`/dev/ebc` ioctl `0x700b`) |
 | `device/boox-adb.rc.template` | Boot-image init script: forces adb and starts the shimmed composer |

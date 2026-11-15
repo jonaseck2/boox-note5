@@ -33,6 +33,8 @@ final class Updater {
     private static final Pattern VERSION = Pattern.compile("^(\\d{4})\\.(\\d{2})\\.(\\d{2})\\.(\\d{1,2})$");
     private static final String[] FILES = {"libbooxepdc.so", "module/post-fs-data.sh", "module/service.sh"};
     static final String APK = "EinkSettings.apk";   // optional: the settings app itself
+    static final String OVERLAYS = "/data/adb/modules/boox_overlays";
+    private static final Pattern OVERLAY = Pattern.compile("^overlays/(BooxEink-[a-z]+\\.apk)$");   // optional RROs
 
     static final class Release {
         final String version, zipUrl, shaUrl;
@@ -118,6 +120,7 @@ final class Updater {
             throw new IOException("bad manifest: " + e.getMessage());
         }
         boolean hasApk = false;
+        Map<String, byte[]> overlays = new java.util.TreeMap<>();
         try {
             JSONObject list = new JSONObject(new String(mf, StandardCharsets.UTF_8)).getJSONObject("files");
             if (list.has(APK)) {
@@ -126,6 +129,16 @@ final class Updater {
                     throw new IOException("hash mismatch: " + APK);
                 }
                 hasApk = true;
+            }
+            for (java.util.Iterator<String> it = list.keys(); it.hasNext(); ) {
+                String f = it.next();
+                Matcher om = OVERLAY.matcher(f);
+                if (!om.matches()) continue;
+                byte[] body = files.get(f);
+                if (body == null || !hex(sha256(body)).equals(list.getJSONObject(f).getString("sha256"))) {
+                    throw new IOException("hash mismatch: " + f);
+                }
+                overlays.put(om.group(1), body);
             }
         } catch (org.json.JSONException e) {
             throw new IOException("bad manifest: " + e.getMessage());
@@ -143,6 +156,12 @@ final class Updater {
             // kept outside the staging dir (the install script deletes it); installed on Restart
             try (FileOutputStream o = new FileOutputStream(new File(dir, APK))) { o.write(files.get(APK)); }
         }
+        if (!overlays.isEmpty()) new File(stage, "overlays").mkdirs();
+        for (Map.Entry<String, byte[]> o : overlays.entrySet()) {
+            try (FileOutputStream out = new FileOutputStream(new File(stage, "overlays/" + o.getKey()))) {
+                out.write(o.getValue());
+            }
+        }
         long vc = code(rel.version);
         String s = stage.getAbsolutePath();
         String script = "set -e\n"
@@ -159,11 +178,20 @@ final class Updater {
                 + "cp $S/module/service.sh $M/service.sh\n"
                 + "chmod 755 $M/post-fs-data.sh $M/service.sh\n"
                 + "sed -i 's/^version=.*/version=" + rel.version + "/; s/^versionCode=.*/versionCode=" + vc + "/' $M/module.prop\n"
+                + (overlays.isEmpty() ? "" : "O=" + OVERLAYS + "\n"
+                    + "mkdir -p $O/system/product/overlay\n"
+                    + "for f in $S/overlays/*.apk; do n=$(basename $f); cp $f $O/system/product/overlay/$n.new;"
+                    + " chmod 644 $O/system/product/overlay/$n.new; mv -f $O/system/product/overlay/$n.new $O/system/product/overlay/$n; done\n"
+                    + "printf 'id=boox_overlays\\nname=Boox e-ink overlays\\nversion=" + rel.version
+                    + "\\nversionCode=1\\nauthor=boox\\ndescription=White app drawer and notification shade backgrounds for e-ink\\n' > $O/module.prop\n"
+                    + "chcon -R u:object_r:system_file:s0 $O/system\n"
+                    + "rm -f $O/disable $O/remove\n")
                 + "rm -rf $S\n"
                 + "grep '^version=' $M/module.prop\n";
         Root.Result r = Root.run(script);
         if (!r.ok()) throw new IOException("install failed: " + r.out.trim());
-        return "Installed glue " + rel.version + (hasApk ? " (with a new settings app)" : "") + ". Restart to apply.";
+        return "Installed glue " + rel.version + (hasApk ? " (with a new settings app)" : "")
+                + (overlays.isEmpty() ? "" : " (with " + overlays.size() + " overlays)") + ". Restart to apply.";
     }
 
     private static byte[] get(String url) throws IOException {

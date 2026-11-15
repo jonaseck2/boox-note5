@@ -1,4 +1,4 @@
-# Build and publish a glue release (display shim + module scripts + E-ink settings app) from a clean
+# Build and publish a glue release (display shim + module scripts + E-ink settings app + overlays) from a clean
 # checkout. No device libraries needed: the shim links against stubs (byte-identical output, see
 # docs/runbooks/eink-interface.md). The APK is signed with the existing key from the repo secret
 # EINK_KEYSTORE_B64, so the tablet accepts it as an update.
@@ -31,7 +31,7 @@ jobs:
           java-version: "21"
       - name: Build display shim (stub sysroot)
         run: CLANG=clang LLD=lld device/epdcshim/build.sh
-      - name: Build E-ink settings app
+      - name: Build E-ink settings app and overlays
         env:
           EINK_KEYSTORE_B64: ${{ secrets.EINK_KEYSTORE_B64 }}
         run: |
@@ -39,6 +39,7 @@ jobs:
           echo "$EINK_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/eink.keystore"
           BOOX_TOOLS="$RUNNER_TEMP/tools" EINK_KEYSTORE="$RUNNER_TEMP/eink.keystore" EINK_REQUIRE_KEYSTORE=1 \
             device/einksettings/build.sh
+          BOOX_TOOLS="$RUNNER_TEMP/tools" EINK_KEYSTORE="$RUNNER_TEMP/eink.keystore" device/overlays/build.sh
           rm -f "$RUNNER_TEMP/eink.keystore"
       - name: Bundle and publish
         env:

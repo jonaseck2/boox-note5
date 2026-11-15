@@ -103,6 +103,10 @@ def update_glue(dev, bundle: Path, repo_root: Path, log=print) -> bool:
         # an update of the system package (first install goes through device/einksettings/install.sh)
         dev.adb("install", "-r", str(apk), timeout=120)
         log("settings app updated")
+    if list((work / "overlays").glob("BooxEink-*.apk")):
+        subprocess.run([str(repo_root / "device/overlays/install.sh")], env={**env, "SRC": str(work / "overlays")},
+                       check=True, capture_output=True)
+        log("overlays updated")
     log("installed; rebooting")
     dev.reboot()
     time.sleep(5)

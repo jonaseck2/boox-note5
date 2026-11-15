@@ -164,3 +164,20 @@ def test_settings_apk_ships_when_built(tmp_path):
         assert "EinkSettings.apk" in zf.namelist()
         m = json.loads(zf.read("manifest.json"))
     assert m["files"]["EinkSettings.apk"]["sha256"] == _sha(b"PK fake apk")
+
+
+def test_overlays_ship_when_built(tmp_path):
+    repo = _fake_repo(tmp_path / "repo")
+    d = repo / "device/overlays/build"
+    d.mkdir(parents=True)
+    for t in ("framework", "launcher", "systemui"):
+        (d / f"BooxEink-{t}.apk").write_bytes(f"PK {t}".encode())
+    (d / "BooxEink-launcher.apk.idsig").write_bytes(b"sig")   # build by-product, must not ship
+    z = release.build_glue_bundle(repo, tmp_path / "out", "2026.11.15.1")
+    with zipfile.ZipFile(z) as zf:
+        names = [n for n in zf.namelist() if n.startswith("overlays/")]
+        m = json.loads(zf.read("manifest.json"))
+    assert names == ["overlays/BooxEink-framework.apk", "overlays/BooxEink-launcher.apk",
+                     "overlays/BooxEink-systemui.apk"]
+    assert m["files"]["overlays/BooxEink-systemui.apk"]["sha256"] == _sha(b"PK systemui")
+    assert release.verify_bundle(z, tmp_path / "x")["version"] == "2026.11.15.1"
