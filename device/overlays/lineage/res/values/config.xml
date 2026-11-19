@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- LightsCapabilities bits: 1 RGB notification LED, 2 RGB battery LED, 8 pulsating (HAL timer
+         blink), 64 battery LED. Not set: 32/128 (HAL brightness per light; Lineage scales the colour
+         in software instead), 16 (segmented battery LED). -->
+    <integer name="config_deviceLightCapabilities">75</integer>
+</resources>

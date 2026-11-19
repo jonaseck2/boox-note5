@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Boox Note5 is Wi-Fi only. The GSI's /system/etc/permissions/android.hardware.telephony.gsm.xml
+     declares the Android 14+ telephony sub-features. The stock vendor file
+     android.hardware.onyx_unavailable_features.xml removes only telephony, gsm, cdma and ims.
+     SystemConfig applies every unavailable-feature after it has read all partitions.
+     Kept on purpose: android.software.telecom, android.software.connectionservice (VoIP apps). -->
+<permissions>
+    <unavailable-feature name="android.hardware.telephony.calling" />
+    <unavailable-feature name="android.hardware.telephony.data" />
+    <unavailable-feature name="android.hardware.telephony.messaging" />
+    <unavailable-feature name="android.hardware.telephony.radio.access" />
+    <unavailable-feature name="android.hardware.telephony.subscription" />
+    <unavailable-feature name="android.hardware.telephony.euicc" />
+    <unavailable-feature name="android.hardware.telephony.euicc.mep" />
+    <unavailable-feature name="android.hardware.telephony.mbms" />
+    <unavailable-feature name="android.hardware.telephony.ims.singlereg" />
+</permissions>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- RGB status LED (pmi632 red/green/blue): the GSI ships false, so NotificationAttentionHelper
+         sets mHasLight=false and never lights LIGHT_ID_NOTIFICATIONS. -->
+    <bool name="config_intrusiveNotificationLed">true</bool>
+</resources>

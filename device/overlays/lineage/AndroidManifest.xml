@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RGB status LED: Lineage's light capabilities. The GSI ships 8 (pulsating only), so
+     LineageBatteryLights.isSupported() is false and the battery light stays off. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.boox.eink.overlay.lineage">
+    <overlay android:targetPackage="lineageos.platform" android:isStatic="true" android:priority="10" />
+    <application android:hasCode="false" />
+</manifest>

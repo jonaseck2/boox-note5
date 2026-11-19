@@ -12,7 +12,7 @@ KSPASS=${EINK_KSPASS:-boox-eink}
 [ -n "${JAVA_HOME:-}" ] && export JAVA_HOME && export PATH="$JAVA_HOME/bin:$PATH"
 [ -x "$BT/aapt2" ] || ../einksettings/build.sh >/dev/null   # fetches the SDK on first use
 mkdir -p build
-for t in launcher systemui framework etar; do
+for t in launcher systemui framework etar lineage; do
   rm -rf "build/$t" && mkdir -p "build/$t"
   "$BT/aapt2" compile --dir "$t/res" -o "build/$t/res.zip"
   "$BT/aapt2" link --manifest "$t/AndroidManifest.xml" -I "$JAR" -o "build/$t/unsigned.apk" "build/$t/res.zip"

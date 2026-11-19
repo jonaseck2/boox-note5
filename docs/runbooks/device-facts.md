@@ -94,3 +94,17 @@ Consequence: replacing `system` with a GSI removes refresh-mode control, ditheri
 - `/data` uses `metadata_encryption=aes-256-xts:wrappedkey_v0` (`vendor_b` fstab). Stock `recovery_b` (user build) has adbd but no keymaster or vold, so it cannot read images staged on `/data`.
 - GitHub release assets are limited to 2 GiB each, so a GSI system image cannot be a single release asset.
 - Verdict: system updates go over USB/EDL. Glue updates (shim, module, settings) can run on the device.
+
+## Sensors (2026-11-19)
+
+- The Note5 has no accelerometer and no ambient light sensor. Auto-rotate and adaptive brightness cannot work. Rotation stays manual (Quick Settings tile).
+- Evidence: with `persist.vendor.sensors.debug.hal=v` the sensor HAL logs `suid_event for accel, num_suids=0` and `suid_event for ambient_light, num_suids=0`. The DSP lists only `resampler`. `lshal debug android.hardware.sensors@2.0::ISensors/default` reports 0 sensors.
+- Stock firmware is the same: stock persist `sensors/sensors_list.txt` holds only `resampler`, and its registry matches the live one byte for byte. The `bengal_lsm6dso_0.json` accel config is Qualcomm's reference board. Reviews list "no G-sensor" as a Note5 con.
+- Not the cause: the missing `/vendor/bin/init.qcom.sensors.sh` (stock rc is the same), and the `vendor_sensors` → `vendor_diag_device` denials (diag logging only).
+
+
+## Cover, fingerprint, telephony (2026-11-19)
+
+- **Cover (hall sensor).** `onyx-hall` (`/dev/input/event6`, GPIO 67 IRQ `onyx_hall`, wakeup enabled) has no `.kl` file, so Android maps it with `Generic.kl`: 56 `ALT_LEFT`, 116 `POWER`, 143 `WAKEUP`. The kernel `halldet_work_func` (disassembled from the stock kernel in `boot_b.magisk.img`, offset `0xc68768`) sends ALT down, key down, key up, ALT up. The key is `KEY_POWER` on close (state 0) and `KEY_WAKEUP` on open (state 1). DT `send alt key: 1` adds the ALT wrapper. On close the driver sends nothing while `ONYX_PM_STATE` is 3 (`mem`, deep suspend), so a suspended tablet stays asleep. The stock framework only writes `/sys/onyx_misc/hall_ctl`, so the GSI needs no framework code. `mLidState=LID_ABSENT` is expected: the driver reports no `SW_LID`. Gap: closing the cover while the screen is off but the kernel is not suspended sends `POWER` and wakes the screen. With USB connected and `stay_on_while_plugged_in=7` the kernel never suspends (`suspend_stats/success` = 0).
+- **Fingerprint.** Fortsense sensor, `/dev/fortsense_fp` (`fsfp_device`). The HIDL HAL `android.hardware.biometrics.fingerprint@2.1-service` (log tag `fsfp-hal-device`) runs the same ioctl init sequence as stock (`0x00, 0x20, 0x02, 0x21, 0x30`). Android 16 registers it as `FingerprintProvider/defaultHIDL`, sensor 0, strength 15 (strong). Enrollment needs a screen lock first: `android.settings.FINGERPRINT_ENROLL` opens `ChooseLockGeneric` with "PIN • Fingerprint". Templates go to `/data/vendor_de/0/fpdata`.
+- **Telephony features.** The GSI file `/system/etc/permissions/android.hardware.telephony.gsm.xml` declares the telephony sub-features (`calling`, `data`, `messaging`, `radio.access`, `subscription`) and `android.software.telecom`. The stock vendor file `android.hardware.onyx_unavailable_features.xml` removes only `telephony`, `gsm`, `cdma` and `ims`, so the sub-features stay. Fix: Magisk module `device/wifionly` (`install.sh`) adds `unavailable-feature` entries. `telecom` and `connectionservice` stay because VoIP apps use them. The vendor sets `ro.radio.noril=yes` (`/vendor/bin/init.class_main.sh`).
