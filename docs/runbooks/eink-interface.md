@@ -150,7 +150,8 @@ Sources: the vendor composer and display libraries pulled as root from the runni
 
 - `/sys/class/backlight/onyx_bl_br` = front-light brightness (0–28, world-writable). `onyx_bl_ct` = colour temperature (0–24). `panel0/1-backlight` (what the lights HAL drives) do nothing on this panel.
 - Camera evidence: panel mean 160 → 195 → 165 for `onyx_bl_br` 0 → 28 → 0.
-- `device/epdcshim/module/service.sh` maps `settings system screen_brightness` (1–255) to `onyx_bl_br` once per second. The lowest slider position turns the light off. Measured: 255→28, 128→14, 1→0, 100→10.
+- Android sets brightness through the composer (`dumpsys display`: `BacklightAdapter [useSurfaceControl=true, backlight=null]`), which writes `panel0-backlight` (0–255, `vendor_sysfs_graphics`). The lights HAL (`android.hardware.lights-service.qti` → `lights.bengal.so`) only drives the RGB status LED here. Measured on panel0: awake 100, asleep 0, slider 30 → 30.
+- `device/epdcshim/module/service.sh` mirrors `panel0-backlight` to `onyx_bl_br` every 0.25 s (`p * 28 / 255`, `read` builtin, no fork). Screen off, dim, doze and adaptive brightness reach the front light through it. Measured 2026-11-19: asleep 0, slider 255 → 28, 100 → 10, 1 → 0. Rejected: a replacement `lights.bengal.so` (Android never calls the lights HAL for the backlight) and a hook in the composer shim (the shell mirror needs no SELinux rule).
 - Open: map Night Light to `onyx_bl_ct`.
 - The module scripts are now real files (`device/epdcshim/module/`), which `install.sh` pushes. Before this, generated `printf` strings caused escaping bugs. To restart `service.sh` without a reboot, run `pkill -f boox_ep[d]c/service.sh`. The bracket keeps pkill from matching its own su shell.
 

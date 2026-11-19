@@ -16,31 +16,36 @@ settings put global window_animation_scale 0
 settings put global transition_animation_scale 0
 settings put global animator_duration_scale 0
 
-# 3) Android brightness slider -> front light (lowest position = off), and Night Light -> warm front
-#    light: onyx_bl_ct 0 = cold .. 24 = warm (camera: R/B 1.037 -> 1.174). Night Light's temperature
-#    (2596..4082 K, lower = warmer) maps linearly onto 24..0; Night Light off = 0.
+# 3) Front light follows Android's display brightness. Android drives panel0-backlight (0..255,
+#    through the composer), which has no light behind it on this panel. Mirror it to onyx_bl_br:
+#    slider, screen off (0), dim, doze and adaptive brightness all arrive there. `read` is a shell
+#    builtin, so the 0.25 s poll forks nothing. Measured: on 100, asleep 0, slider 30 -> 30.
+#    Night Light -> warm front light: onyx_bl_ct 0 = cold .. 24 = warm (camera: R/B 1.037 -> 1.174).
+#    Night Light's temperature (2596..4082 K, lower = warmer) maps linearly onto 24..0; off = 0.
+PANEL=/sys/class/backlight/panel0-backlight/brightness
 CT=/sys/class/backlight/onyx_bl_ct/brightness
 max=$(cat /sys/class/backlight/onyx_bl_br/max_brightness 2>/dev/null || echo 28)
+pmax=$(cat /sys/class/backlight/panel0-backlight/max_brightness 2>/dev/null || echo 255)
 ctmax=$(cat /sys/class/backlight/onyx_bl_ct/max_brightness 2>/dev/null || echo 24)
-last=; lastct=
+last=; lastct=; n=0
 while true; do
-  b=$(settings get system screen_brightness 2>/dev/null)
-  case "$b" in ''|*[!0-9]*) b=1 ;; esac
-  if [ "$b" != "$last" ]; then
-    v=$(( (b - 1) * max / 254 ))
-    [ "$v" -lt 0 ] && v=0
-    echo "$v" > "$BR"
-    last=$b
+  read p < "$PANEL" 2>/dev/null || p=0
+  case "$p" in ''|*[!0-9]*) p=0 ;; esac
+  if [ "$p" != "$last" ]; then
+    echo $(( p * max / pmax )) > "$BR"
+    last=$p
   fi
-  on=$(settings get secure night_display_activated 2>/dev/null)
-  ct=0
-  if [ "$on" = 1 ]; then
-    k=$(settings get secure night_display_color_temperature 2>/dev/null)
-    case "$k" in ''|*[!0-9]*) k=2850 ;; esac
-    ct=$(( (4082 - k) * ctmax / (4082 - 2596) ))
-    [ "$ct" -lt 0 ] && ct=0
-    [ "$ct" -gt "$ctmax" ] && ct=$ctmax
+  n=$(( (n + 1) % 8 ))
+  if [ $n = 0 ]; then                      # Night Light every 2 s (settings is a binder call)
+    ct=0
+    if [ "$(settings get secure night_display_activated 2>/dev/null)" = 1 ]; then
+      k=$(settings get secure night_display_color_temperature 2>/dev/null)
+      case "$k" in ''|*[!0-9]*) k=2850 ;; esac
+      ct=$(( (4082 - k) * ctmax / (4082 - 2596) ))
+      [ "$ct" -lt 0 ] && ct=0
+      [ "$ct" -gt "$ctmax" ] && ct=$ctmax
+    fi
+    if [ "$ct" != "$lastct" ]; then echo "$ct" > "$CT"; lastct=$ct; fi
   fi
-  if [ "$ct" != "$lastct" ]; then echo "$ct" > "$CT"; lastct=$ct; fi
-  sleep 2
+  sleep 0.25
 done
