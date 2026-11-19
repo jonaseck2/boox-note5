@@ -4,12 +4,26 @@
 # EINK_KEYSTORE_B64, so the tablet accepts it as an update.
 name: release
 
+# A push to main that changes anything shipped in the bundle releases on its own, as
+# YYYY.MM.DD.N with N = 1 + the highest glue-vYYYY.MM.DD.N tag of today (UTC).
 on:
+  push:
+    branches: [main]
+    paths:
+      - device/epdcshim/**
+      - device/eink-settings.sh
+      - device/einksettings/**
+      - device/overlays/**
+      - tools/booxctl/release.py
   workflow_dispatch:
     inputs:
       version:
-        description: "Glue version, YYYY.MM.DD.N"
-        required: true
+        description: "Glue version, YYYY.MM.DD.N (empty = next free number today)"
+        required: false
+
+concurrency:
+  group: release     # serial runs, so two pushes never pick the same N
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -19,10 +33,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Validate version
+      - name: Version
+        id: v
         env:
+          GH_TOKEN: ${{ github.token }}
           V: ${{ inputs.version }}
-        run: echo "$V" | grep -Eq '^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]{1,2}$'
+        run: |
+          if [ -z "$V" ]; then
+            d=$(date -u +%Y.%m.%d)
+            n=$(gh release list -R "$GITHUB_REPOSITORY" -L 200 --json tagName -q '.[].tagName' \
+              | sed -n "s/^glue-v$d\.\([0-9]*\)$/\1/p" | sort -n | tail -1)
+            V=$d.$(( ${n:-0} + 1 ))
+          fi
+          echo "$V" | grep -Eq '^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]{1,2}$'
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "glue $V"
       - name: Toolchain
         run: sudo apt-get update -q && sudo apt-get install -y -q clang lld
       - uses: actions/setup-java@v5
@@ -44,5 +69,5 @@ jobs:
       - name: Bundle and publish
         env:
           GH_TOKEN: ${{ github.token }}
-          V: ${{ inputs.version }}
+          V: ${{ steps.v.outputs.version }}
         run: cd tools && python3 -m booxctl release glue --version "$V" --publish --repo "$GITHUB_REPOSITORY"
