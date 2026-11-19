@@ -74,6 +74,7 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
     private SwitchPreference lutEnable, adaptive, bold;
     private ListPreference black, white, clean, waveform;
     private Preference refresh, reset, update;
+    private WarmthPreference warmth;
 
     @Override
     public void onCreate(Bundle state) {
@@ -142,6 +143,12 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
         });
         add(refreshCat, reset);
 
+        PreferenceCategory light = category(s, "Front light");
+        warmth = new WarmthPreference(a, this::setWarmth);
+        warmth.setTitle("Light warmth");
+        warmth.setSummary("Reading…");
+        light.addPreference(warmth);
+
         PreferenceCategory upd = category(s, "Updates");
         update = new Preference(a);
         update.setTitle("Check for updates");
@@ -191,7 +198,7 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
     }
 
     private void setControlsEnabled(boolean on) {
-        for (Preference p : new Preference[]{lutEnable, adaptive, bold, black, white, clean, waveform, refresh, reset, update}) {
+        for (Preference p : new Preference[]{lutEnable, adaptive, bold, black, white, clean, waveform, refresh, reset, update, warmth}) {
             p.setEnabled(on);
         }
     }
@@ -201,14 +208,24 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
     private void load() {
         StringBuilder sh = new StringBuilder();
         for (String k : DEFAULTS.keySet()) sh.append("echo \"").append(k).append("=$(getprop ").append(k).append(")\"\n");
+        sh.append("echo \"").append(Light.WARMTH).append("=$(getprop ").append(Light.WARMTH).append(")\"\n");
         io.execute(() -> {
             Root.Result r = Root.run(sh.toString());
             Map<String, Integer> got = new HashMap<>();
+            int[] warm = {0};
             if (r.ok()) {
                 for (String line : r.out.split("\n")) {
                     int eq = line.indexOf('=');
                     if (eq <= 0) continue;
                     String k = line.substring(0, eq).trim();
+                    if (k.equals(Light.WARMTH)) {
+                        try {
+                            warm[0] = Light.clamp(Integer.parseInt(line.substring(eq + 1).trim()));
+                        } catch (NumberFormatException e) {
+                            // unset: cold
+                        }
+                        continue;
+                    }
                     if (!DEFAULTS.containsKey(k)) continue;
                     try {
                         got.put(k, Integer.parseInt(line.substring(eq + 1).trim()));
@@ -227,6 +244,7 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
                 current.putAll(got);
                 status.setSummary("Granted. Changes apply immediately.");
                 show();
+                warmth.setValue(warm[0]);
                 setControlsEnabled(true);
             });
         });
@@ -305,6 +323,16 @@ public class EinkFragment extends PreferenceFragment implements Preference.OnPre
         }
         write(w, null);
         return false;   // the UI updates from current after the root write succeeds
+    }
+
+    private void setWarmth(int v) {
+        io.execute(() -> {
+            Root.Result r = Light.write(v);
+            ui(() -> {
+                if (r.ok()) warmth.setValue(v);
+                else toast("Failed: " + r.out.trim());
+            });
+        });
     }
 
     private static int parse(Object o) {

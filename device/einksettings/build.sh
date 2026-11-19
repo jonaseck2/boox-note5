@@ -38,7 +38,8 @@ command -v javac >/dev/null || { echo "need a JDK: brew install openjdk" >&2; ex
 rm -rf build
 mkdir -p build/classes build/dex
 
-"$BT/aapt2" link --manifest AndroidManifest.xml -I "$JAR" -o build/unsigned.apk
+"$BT/aapt2" compile --dir res -o build/res.zip
+"$BT/aapt2" link --manifest AndroidManifest.xml -I "$JAR" -o build/unsigned.apk build/res.zip
 
 # shellcheck disable=SC2046
 javac -nowarn -Xlint:none --release 11 -classpath "$JAR" -d build/classes $(find src -name '*.java')
@@ -59,5 +60,5 @@ fi
 "$BT/apksigner" sign --ks "$KS" --ks-pass "pass:$KSPASS" --ks-key-alias eink \
   --out build/EinkSettings.apk build/aligned.apk 2>/dev/null
 "$BT/apksigner" verify build/EinkSettings.apk 2>/dev/null
-rm -f build/unsigned.apk build/aligned.apk build/EinkSettings.apk.idsig
+rm -f build/res.zip build/unsigned.apk build/aligned.apk build/EinkSettings.apk.idsig
 echo "built $(pwd)/build/EinkSettings.apk ($(wc -c < build/EinkSettings.apk | tr -d ' ') bytes)"

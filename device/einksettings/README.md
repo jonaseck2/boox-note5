@@ -13,6 +13,11 @@ The screen sets the properties that `device/epdcshim` reads live. Pipeline detai
 | Ghosting clean | `persist.boox.epdc.clean_after`, `persist.boox.epdc.clean_mode` | Off = `clean_mode=0`. A count N = `clean_after=N`, `clean_mode=16`. |
 | Refresh screen now | — | `cat /sys/class/sepdc/debug/panel_clean`, then bumps `sys.boox.epdc.force` |
 | Reset to defaults | all of the above | shim defaults |
+| Light warmth (slider) | `persist.boox.light.warmth` | 0 (cold) – 24 (warmest), default 0. Not touched by Reset. `service.sh` applies it to `onyx_bl_ct` every 2 s. Night Light can only raise it. |
+
+**Quick Settings tile "Light warmth"** (`WarmthTile`): each tap steps the warmth 0 → 8 → 16 → 24 → 0. Add it from the
+Quick Settings editor (pencil icon). SystemUI destroys a custom tile whose service has no manifest icon, so the app ships one
+resource, `res/drawable/ic_warmth.xml`.
 
 "Off" for the ghosting clean writes `clean_mode=0`, never `clean_after=0`. With `clean_after=0` the shim's
 test `u_n >= clean_after` is always true, so it would send a clean on every idle tick.

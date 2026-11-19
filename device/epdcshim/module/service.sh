@@ -20,8 +20,9 @@ settings put global animator_duration_scale 0
 #    through the composer), which has no light behind it on this panel. Mirror it to onyx_bl_br:
 #    slider, screen off (0), dim, doze and adaptive brightness all arrive there. `read` is a shell
 #    builtin, so the 0.25 s poll forks nothing. Measured: on 100, asleep 0, slider 30 -> 30.
-#    Night Light -> warm front light: onyx_bl_ct 0 = cold .. 24 = warm (camera: R/B 1.037 -> 1.174).
-#    Night Light's temperature (2596..4082 K, lower = warmer) maps linearly onto 24..0; off = 0.
+#    Warmth: onyx_bl_ct 0 = cold .. 24 = warm (camera: R/B 1.037 -> 1.174), from
+#    persist.boox.light.warmth (E-ink settings slider, Quick Settings tile). While Night Light is on,
+#    its temperature (2596..4082 K, lower = warmer, mapped onto 24..0) raises it, never lowers it.
 PANEL=/sys/class/backlight/panel0-backlight/brightness
 CT=/sys/class/backlight/onyx_bl_ct/brightness
 max=$(cat /sys/class/backlight/onyx_bl_br/max_brightness 2>/dev/null || echo 28)
@@ -37,14 +38,16 @@ while true; do
   fi
   n=$(( (n + 1) % 8 ))
   if [ $n = 0 ]; then                      # Night Light every 2 s (settings is a binder call)
-    ct=0
+    ct=$(getprop persist.boox.light.warmth)
+    case "$ct" in ''|*[!0-9]*) ct=0 ;; esac
     if [ "$(settings get secure night_display_activated 2>/dev/null)" = 1 ]; then
       k=$(settings get secure night_display_color_temperature 2>/dev/null)
       case "$k" in ''|*[!0-9]*) k=2850 ;; esac
-      ct=$(( (4082 - k) * ctmax / (4082 - 2596) ))
-      [ "$ct" -lt 0 ] && ct=0
-      [ "$ct" -gt "$ctmax" ] && ct=$ctmax
+      nl=$(( (4082 - k) * ctmax / (4082 - 2596) ))
+      [ "$nl" -gt "$ct" ] && ct=$nl
     fi
+    [ "$ct" -lt 0 ] && ct=0
+    [ "$ct" -gt "$ctmax" ] && ct=$ctmax
     if [ "$ct" != "$lastct" ]; then echo "$ct" > "$CT"; lastct=$ct; fi
   fi
   sleep 0.25

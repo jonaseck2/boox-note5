@@ -19,7 +19,7 @@ whole loop over adb and Qualcomm EDL. A camera facing the panel scores what a pe
   - A boot guard restores the previous shim after 3 unhealthy boots.
 - Settings → Display → **E-ink** (`device/einksettings`) sets contrast, waveform and the ghosting
   clean, and triggers a full refresh.
-- The brightness slider drives the front light, and Night Light warms it.
+- The front light follows Android brightness, including off when the screen sleeps. Warmth has its own slider in Settings › Display › E-ink and a Quick Settings tile.
 - Releases are built by GitHub Actions: Actions → **release** → Run workflow with a version `YYYY.MM.DD.N`.
   The shim links against generated stubs (no device libraries needed), and the APK is signed with the
   key in the repo secret `EINK_KEYSTORE_B64`.

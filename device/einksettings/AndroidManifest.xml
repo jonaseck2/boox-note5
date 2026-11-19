@@ -4,8 +4,8 @@
      installed into /system/app through a Magisk module. See README.md. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.boox.einksettings"
-    android:versionCode="6"
-    android:versionName="1.5">
+    android:versionCode="7"
+    android:versionName="1.6">
 
     <!-- targetSdk 34: avoids forced edge-to-edge (targetSdk 35+), which would draw the
          framework preference list under the status bar. -->
@@ -34,10 +34,21 @@
                 android:value="E-ink" />
             <meta-data
                 android:name="com.android.settings.summary"
-                android:value="Contrast, waveform, ghosting clean, full refresh" />
+                android:value="Contrast, waveform, ghosting clean, light warmth" />
             <meta-data
                 android:name="com.android.settings.order"
                 android:value="100" />
         </activity>
+
+        <service
+            android:name=".WarmthTile"
+            android:label="Light warmth"
+            android:icon="@drawable/ic_warmth"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>
