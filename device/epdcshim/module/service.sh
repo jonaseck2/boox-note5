@@ -29,11 +29,25 @@ max=$(cat /sys/class/backlight/onyx_bl_br/max_brightness 2>/dev/null || echo 28)
 pmax=$(cat /sys/class/backlight/panel0-backlight/max_brightness 2>/dev/null || echo 255)
 ctmax=$(cat /sys/class/backlight/onyx_bl_ct/max_brightness 2>/dev/null || echo 24)
 last=; lastct=; n=0
+# 4) Touch watchdog (evidence only). 2026-11-20: after a night asleep with 637 failed suspends
+#    (alarmtimer -EBUSY) the cyttsp5 touch controller stopped answering on I2C (-107) with its
+#    driver IRQ disabled; hw_reset and ttdl_restart did not recover it, a reboot did. On each wake,
+#    log the state if the driver IRQ is disabled, so the next occurrence keeps its kernel log.
+TP=/sys/bus/i2c/devices/2-0024
+touch_check() {
+  sleep 2
+  case "$(cat $TP/drv_irq 2>/dev/null)" in *DISABLED*)
+    { echo "== $(date) touch IRQ disabled after wake"; cat $TP/hw_irq_stat
+      for f in /sys/power/suspend_stats/*; do echo "${f##*/}: $(cat $f)"; done
+      dmesg | grep -i -E "cyttsp|ONYX_TP|PM: |suspend" | tail -60; } >> /data/adb/boox_touch.log 2>&1 ;;
+  esac
+}
 while true; do
   read p < "$PANEL" 2>/dev/null || p=0
   case "$p" in ''|*[!0-9]*) p=0 ;; esac
   if [ "$p" != "$last" ]; then
     echo $(( p * max / pmax )) > "$BR"
+    [ "$last" = 0 ] && touch_check &        # screen woke
     last=$p
   fi
   n=$(( (n + 1) % 8 ))
