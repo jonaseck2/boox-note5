@@ -58,7 +58,14 @@ def main(argv=None):
     pwt = sub.add_parser("watch", help="keep adb-over-Wi-Fi up, log drops/reboots/crashes/touch recoveries, pull panic logs")
     pwt.add_argument("host", help="tablet IP (port 5555 assumed)")
     pwt.add_argument("--out", type=Path, default=Path.home() / "boox-backups" / "watch")
+    psk = sub.add_parser("soak", help="sleep/wake cycles, touch controller checked after each wake")
+    psk.add_argument("target", help="adb target, e.g. <ip>:5555 (run with the USB cable out)")
+    psk.add_argument("--cycles", type=int, default=20)
+    psk.add_argument("--off", type=float, default=30, help="seconds asleep per cycle")
     a = ap.parse_args(argv)
+    if a.cmd == "soak":
+        from . import soak
+        return soak.run(a.target, a.cycles, a.off)
     if a.cmd == "watch":
         from . import watch
         watch.Watch(a.host, a.out).run()

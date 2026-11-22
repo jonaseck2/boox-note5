@@ -50,7 +50,10 @@ class Watch:
         r = self.adb("shell", "echo ok", timeout=10)
         if r is not None and r.returncode == 0 and b"ok" in r.stdout:
             return True
-        subprocess.run([self.adb_bin, "connect", self.target], capture_output=True, timeout=15)
+        try:
+            subprocess.run([self.adb_bin, "connect", self.target], capture_output=True, timeout=15)
+        except (subprocess.TimeoutExpired, OSError):
+            return False
         r = self.adb("shell", "echo ok", timeout=10)
         return r is not None and r.returncode == 0 and b"ok" in r.stdout
 
@@ -100,6 +103,17 @@ class Watch:
                         self.event("TOUCH RECOVERED: " + line.strip()[:200])
 
     def run(self, poll_s: float = 5):
+        # The watcher must outlive whatever the tablet does: log an unexpected error and keep going.
+        while True:
+            try:
+                self._run(poll_s)
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:  # noqa: BLE001
+                self.event(f"WATCH ERROR {type(e).__name__}: {e}")
+                time.sleep(poll_s)
+
+    def _run(self, poll_s: float):
         was_up = None
         down_since = None
         while True:

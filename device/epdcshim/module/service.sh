@@ -17,8 +17,14 @@ settings put global transition_animation_scale 0
 settings put global animator_duration_scale 0
 
 # Wi-Fi adb on port 5555, so the tablet can be used and monitored without a cable (booxctl watch).
-# adb keeps its RSA key check. persist.boox.adb.tcp=0 turns it off. Restarting adbd drops USB adb briefly.
-if [ "$(getprop persist.boox.adb.tcp)" != 0 ] && [ "$(getprop service.adb.tcp.port)" != 5555 ]; then
+# This build ships ro.adb.secure=0 (no key check): on Wi-Fi that is a root shell for anyone on the
+# network. So Wi-Fi adb starts only with key auth on, and key auth goes on only when
+# /data/misc/adb/adb_keys holds a key (else USB adb would lock out too). Authorized hosts: the keys in
+# that file (USB "Allow" dialog, or append ~/.android/adbkey.pub). persist.boox.adb.tcp=0 turns Wi-Fi
+# adb off. Restarting adbd drops USB adb briefly.
+if [ "$(getprop persist.boox.adb.tcp)" != 0 ] && [ -s /data/misc/adb/adb_keys ] &&
+   { [ "$(getprop ro.adb.secure)" != 1 ] || [ "$(getprop service.adb.tcp.port)" != 5555 ]; }; then
+  /data/adb/magisk/magisk resetprop ro.adb.secure 1
   setprop service.adb.tcp.port 5555; stop adbd; start adbd
 fi
 

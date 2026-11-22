@@ -14,3 +14,13 @@ def test_interesting_keeps_crashes_drops_noise():
 
 def test_interesting_keeps_touch_recovery():
     assert INTERESTING.search("11-22 15:00:01.000 I/boox-touch( 600): touch dead (DISABLED / off), driver rebound")
+
+
+def test_up_survives_connect_timeout(tmp_path, monkeypatch):
+    import subprocess
+    from booxctl import watch
+
+    def hang(*a, **k):
+        raise subprocess.TimeoutExpired(a[0], k.get("timeout", 0))
+    monkeypatch.setattr(watch.subprocess, "run", hang)
+    assert watch.Watch("10.0.0.2", tmp_path).up() is False
