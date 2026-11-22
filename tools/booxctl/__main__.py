@@ -55,7 +55,14 @@ def main(argv=None):
     pw.add_argument("which", nargs="?", default="wave", choices=["wave", "white"])
     pa = sub.add_parser("audit", help="visual-style audit: predicted panel contrast of every element on ~24 screens")
     pa.add_argument("dir", type=Path)
+    pwt = sub.add_parser("watch", help="keep adb-over-Wi-Fi up, log drops/reboots/crashes/touch recoveries, pull panic logs")
+    pwt.add_argument("host", help="tablet IP (port 5555 assumed)")
+    pwt.add_argument("--out", type=Path, default=Path.home() / "boox-backups" / "watch")
     a = ap.parse_args(argv)
+    if a.cmd == "watch":
+        from . import watch
+        watch.Watch(a.host, a.out).run()
+        return 0
     dev = None if a.cmd == "release" else Device(Runner())   # release needs no tablet (CI)
     if a.cmd == "audit":
         from . import audit

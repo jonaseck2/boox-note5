@@ -10,9 +10,10 @@ VCODE=$(echo "$VERSION" | awk -F. 'NF==4 && $1 ~ /^[0-9]+$/ {printf "%d", ($1*10
 S=${BOOX_SERIAL:-$(head -n1 ~/.config/boox/serial 2>/dev/null)}; [ -n "$S" ] || { echo "set BOOX_SERIAL or write the serial to ~/.config/boox/serial" >&2; exit 1; }
 export ADB_LIBUSB=1
 A="adb -s $S"
-H_SO=$(shasum -a 256 "$SRC/libbooxepdc.so" | cut -d' ' -f1)
-H_PF=$(shasum -a 256 "$SRC/module/post-fs-data.sh" | cut -d' ' -f1)
-H_SV=$(shasum -a 256 "$SRC/module/service.sh" | cut -d' ' -f1)
+sha() { if command -v shasum >/dev/null; then shasum -a 256 "$1"; else sha256sum "$1"; fi | cut -d' ' -f1; }   # sha256sum: Linux/Windows hosts
+H_SO=$(sha "$SRC/libbooxepdc.so")
+H_PF=$(sha "$SRC/module/post-fs-data.sh")
+H_SV=$(sha "$SRC/module/service.sh")
 $A push "$SRC/libbooxepdc.so" /data/local/tmp/libbooxepdc.so >/dev/null
 $A push "$SRC/module/post-fs-data.sh" /data/local/tmp/boox-post-fs-data.sh >/dev/null
 $A push "$SRC/module/service.sh" /data/local/tmp/boox-service.sh >/dev/null

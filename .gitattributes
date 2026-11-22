@@ -1,0 +1,7 @@
+# Device scripts run on Android sh: never CRLF, whatever core.autocrlf says.
+* text=auto
+*.sh text eol=lf
+*.rc text eol=lf
+*.template text eol=lf
+*.c text eol=lf
+*.py text eol=lf
