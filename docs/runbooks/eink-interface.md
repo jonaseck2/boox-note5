@@ -255,6 +255,7 @@ done
 - Result: dark mode 77 → 42 flagged of 595 (most of the rest are scoring artifacts: back-arrow discs, Chrome's disabled back/forward). Light mode unchanged (33 of 571). Light screens never trip the detector at 60 %.
 - Curve choice from the offline sweep on the dark captures (flagged of 595, with the per-tile polarity bold): 40/235 → 74, 16/235 → 75, 16/200 → 46, 10/190 → 45, **20/180 → 44**, 0/170 → 47.
 - `device/eink-settings.sh` keeps a dark theme the owner chose (`ui_night_mode` 2). Otherwise it sets light.
+- 2026-11-22, Chrome new-tab page in the dark theme (camera): blacks show as mid-grey, and the previous page (google.com: logo, search box) stays visible as a ghost. Three full-screen `0x13` cleans in 2 min did not remove it. A `0x10` clean followed by a forced update and a `0x13` clean left the whole panel **white** until a light page (Home) redrew it. That matches the owner's report that a swipe down "goes all white". With `cmd uimode night no` the same page is readable with no ghost. The owner's theme was switched to light. The dark profile is not reliable for daily use on this panel.
 - Still open: the dark theme still ghosts more than the light theme between cleans, because wf4 partial updates do not fully drive large dark areas. Dimmed QS tiles (Wallet, Device controls, Battery Saver: 148 on 35) and the notification expand chevrons stay low contrast.
 
 ### Visual-style audit (2026-11-14, `booxctl audit <dir>`)
